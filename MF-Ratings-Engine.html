@@ -333,6 +333,9 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
       <button data-view="sip">SIP</button>
       <button data-view="setup">Setup</button>
     </nav>
+    <button id="tri-load-hdr" class="primary" title="Load NIFTY TRI + hybrid + debt pack" style="padding:8px 12px;font-size:12px;white-space:nowrap">
+      <i class="fa-solid fa-cloud-arrow-down"></i><span id="tri-hdr-label">Load TRI</span>
+    </button>
     <button id="theme" class="icon-btn" title="Light / dark"><i class="fa-solid fa-moon"></i></button>
   </div>
 </header>
@@ -347,9 +350,10 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
 <section id="view-home">
   <p class="eyebrow">Gohil Insurance · local studio</p>
   <div class="title" style="font-size:32px;letter-spacing:-.03em">Rate funds. Review books. Plan cash flow.</div>
-  <p class="lede">Seven-parameter scoring against Nifty TRI plus category peers. Time-horizon SWP buckets and FPA SIP splits. Runs in this file — AMFI NAVs live, TRI from the published pack (no NSE login).</p>
+  <p class="lede">Score funds against Nifty TRI (and hybrid 65:35 / 50:50 / 15:85). One click loads the pack — no NSE login. Then rate categories or review a book.</p>
   <div class="home-grid">
-    <button class="home-card" data-go="rate"><i class="fa-solid fa-chart-line" style="color:var(--acc)"></i><b>Rate a category</b><span class="small muted">AMFI NAVs vs TRI + peers. RAG on CAGR, rolling, alpha, Sortino, capture, vol.</span></button>
+    <button class="home-card" id="home-tri" type="button"><i class="fa-solid fa-cloud-arrow-down" style="color:var(--acc)"></i><b>Load TRI + hybrid pack</b><span class="small muted" id="home-tri-sub">NIFTY 100 / Mid / Small + hybrid 65:35, 50:50, 15:85, equity savings, arbitrage, 7% debt. No login.</span></button>
+    <button class="home-card" data-go="rate"><i class="fa-solid fa-chart-line" style="color:var(--acc)"></i><b>Rate a category</b><span class="small muted">AMFI NAVs vs TRI + peers. 5-metric score (rolling, alpha, Sortino, capture).</span></button>
     <button class="home-card" data-go="pf"><i class="fa-solid fa-wallet" style="color:var(--acc)"></i><b>Portfolio x-ray</b><span class="small muted">Paste or upload CAS / Excel. Match AMFI names, mix, concentration.</span></button>
     <button class="home-card" data-go="swp"><i class="fa-solid fa-calendar" style="color:var(--acc)"></i><b>3-bucket SWP</b><span class="small muted">Debt reserve years 1–2, hybrid buffer 3–5, equity engine 6+.</span></button>
     <button class="home-card" data-go="sip"><i class="fa-solid fa-piggy-bank" style="color:var(--acc)"></i><b>SIP planner</b><span class="small muted">Conservative / moderate / aggressive. Gold only from ₹10,000. Top-ranked funds named.</span></button>
@@ -557,21 +561,20 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
 
   <div class="card">
     <div class="row spread">
-      <div><div class="eyebrow">Benchmark indices</div><div id="trisummary" class="small muted"></div></div>
+      <div><div class="eyebrow">Benchmark indices (TRI + hybrid)</div><div id="trisummary" class="small muted"></div></div>
       <div class="row">
+        <button id="tri-load-setup" class="primary"><i class="fa-solid fa-cloud-arrow-down"></i>Load TRI + hybrid pack</button>
         <label class="file"><i class="fa-solid fa-file-arrow-up"></i>Import TRI CSVs
           <input id="trifile" type="file" accept=".csv,.txt" multiple></label>
-        <label class="file"><i class="fa-solid fa-box-open"></i>Load bundle
+        <label class="file"><i class="fa-solid fa-box-open"></i>Load bundle file
           <input id="tribundle" type="file" accept=".json"></label>
         <button id="tribundlesave" class="ghost"><i class="fa-solid fa-box-archive"></i>Save bundle</button>
       </div>
     </div>
     <p class="tiny muted" style="margin-top:10px">
-      Benchmarks are the published <b>Total Return Indices</b>, not index funds — an index fund trails its index by expenses and tracking error, which would flatter every fund measured against it.
-      Get them from <a href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">niftyindices.com → Historical Data → Total returns Index Values</a>, then the <b>csv format</b> link above the table.
-      NSE caps each export at one calendar year, so select all the yearly files at once — <b>they are merged, not replaced</b>.
-      <b>NIFTY 100 and NIFTY 500 alone cover seven categories</b>, and four years is enough for alpha and both capture ratios.
-      <b>These three stay blank until you import.</b> Then hit <b>Save bundle</b> — one file restores everything, on any device.
+      <b>Load TRI + hybrid pack</b> pulls the published JSON (GitHub / jsDelivr) — NIFTY 100, 500, Midcap 150, Smallcap 250, LargeMidcap 250, Multicap 50:25:25, plus <b>synthetic hybrid TRI</b> 65:35 / 50:50 / 15:85, equity savings, arbitrage, and the 7% debt sleeve.
+      NSE does not publish those hybrid series as a free CSV, so the pack rebuilds them from NIFTY 100 + 7% debt / 5.8% arb. No login.
+      Optional: import yearly CSVs from niftyindices.com, or run <code>GET-TRI-DATA.bat</code> on your PC.
     </p>
     <div id="tritable" style="margin-top:12px"></div>
     <div id="tripending"></div>
@@ -639,7 +642,7 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
 <!-- dialogs -->
 <div id="upmodal" class="overlay hidden"><div style="max-width:560px">
   <div class="row spread" style="margin-bottom:10px">
-    <h3 style="font-size:15px;font-weight:650">Update benchmark data</h3>
+    <h3 style="font-size:15px;font-weight:650">Load TRI + hybrid pack</h3>
     <button id="up-close" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div id="up-log" class="tiny" style="margin-bottom:14px"></div>
@@ -1595,18 +1598,18 @@ const CATEGORIES=[
   tri:"arb",
   find:/arbitrage/, match:c=>/arbitrage/.test(c)},
 
- {id:"liquid", name:"Liquid", grp:"Debt", rule:"Overnight to 91-day. Peer-only — no public TRI.",
-  tri:"", find:/\bliquid\b/, findNot:/liquid\s*etf/, match:c=>/liquid/.test(c)&&!/etf/.test(c)},
- {id:"ultrashort", name:"Ultra Short Duration", grp:"Debt", rule:"3–6 month Macaulay. Peer-only.",
-  tri:"", find:/ultra\s*short/, match:c=>/ultra short/.test(c)},
- {id:"lowdur", name:"Low Duration", grp:"Debt", rule:"6–12 month Macaulay. Peer-only.",
-  tri:"", find:/low\s*duration/, match:c=>/low duration/.test(c)},
- {id:"moneymkt", name:"Money Market", grp:"Debt", rule:"Up to 1 year instruments. Peer-only.",
-  tri:"", find:/money\s*market/, match:c=>/money market/.test(c)},
- {id:"corpbond", name:"Corporate Bond", grp:"Debt", rule:"Min 80% AA+ corporates. Peer-only.",
-  tri:"", find:/corporate\s*bond/, match:c=>/corporate bond/.test(c)},
- {id:"gilt", name:"Gilt", grp:"Debt", rule:"G-Secs. Peer-only.",
-  tri:"", find:/\bgilt\b|g-sec/, match:c=>/gilt|g-sec/.test(c)},
+ {id:"liquid", name:"Liquid", grp:"Debt", rule:"Overnight to 91-day. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/\bliquid\b/, findNot:/liquid\s*etf/, match:c=>/liquid/.test(c)&&!/etf/.test(c)},
+ {id:"ultrashort", name:"Ultra Short Duration", grp:"Debt", rule:"3–6 month Macaulay. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/ultra\s*short/, match:c=>/ultra short/.test(c)},
+ {id:"lowdur", name:"Low Duration", grp:"Debt", rule:"6–12 month Macaulay. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/low\s*duration/, match:c=>/low duration/.test(c)},
+ {id:"moneymkt", name:"Money Market", grp:"Debt", rule:"Up to 1 year. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/money\s*market/, match:c=>/money market/.test(c)},
+ {id:"corpbond", name:"Corporate Bond", grp:"Debt", rule:"Min 80% AA+ corporates. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/corporate\s*bond/, match:c=>/corporate bond/.test(c)},
+ {id:"gilt", name:"Gilt", grp:"Debt", rule:"G-Secs. Scored vs 7% debt sleeve + peers.",
+  tri:"debt7", find:/\bgilt\b|g-sec/, match:c=>/gilt|g-sec/.test(c)},
  {id:"gold", name:"Gold / Silver", grp:"Other", rule:"Commodity ETFs & FoFs. Peer-only.",
   tri:"", find:/\bgold\b|\bsilver\b/, match:c=>/gold|silver/.test(c)},
 ];
@@ -1955,18 +1958,19 @@ function render(){
 function renderTRI(report){
   const need={};
   for(const c of CATEGORIES) (need[c.tri]=need[c.tri]||[]).push(c.name);
-  const have=INDICES.filter(i=>TRI[i.key]).length, want=new Set(CATEGORIES.map(c=>c.tri)).size;
-  $("#trisummary").innerHTML=`<b>${have} of ${want}</b> imported`;
-  $("#tritable").innerHTML=`<div class="tbl-wrap"><table><tbody>${
-    INDICES.filter(i=>need[i.key]).map(i=>{const t=TRI[i.key];
+  const have=INDICES.filter(i=>TRI[i.key]).length;
+  $("#trisummary").innerHTML=`<b>${have} of ${INDICES.length}</b> series in memory`;
+  $("#tritable").innerHTML=`<div class="tbl-wrap"><table><thead><tr>
+    <th></th><th>Index</th><th>Coverage</th><th>Used for</th></tr></thead><tbody>${
+    INDICES.map(i=>{const t=TRI[i.key]; const cats=need[i.key]||[];
       return `<tr><td style="width:20px">${t?'<i class="fa-solid fa-circle-check" style="color:var(--ok)"></i>'
         :'<i class="fa-regular fa-circle" style="color:var(--ink3)"></i>'}</td>
       <td style="font-weight:550">${esc(i.name)}</td>
       <td class="small muted" style="text-align:left">${t?`${t.rows.toLocaleString()} rows · ${t.from} → ${t.to}`
           +(t.files&&t.files.length>1?` · <span class="tiny">merged from ${t.files.length} files</span>`:"")
           +(t.gap?` · <span style="color:var(--warn)">gap before ${t.gap.to}</span>`:"")
-        :'<span style="color:var(--warn)">not imported</span>'}</td>
-      <td class="tiny muted" style="text-align:left">${need[i.key].length} categor${need[i.key].length>1?"ies":"y"}</td></tr>`;}).join("")
+        :'<span style="color:var(--warn)">not loaded</span>'}</td>
+      <td class="tiny muted" style="text-align:left">${cats.length?cats.join(", "): (i.key==="debt7"?"Debt sleeve":"—")}</td></tr>`;}).join("")
   }</tbody></table></div>`;
   $("#tripending").innerHTML=!PENDING.length?"":
     `<div class="note warn" style="margin-top:10px"><b>Which index is this?</b>
@@ -1978,6 +1982,7 @@ function renderTRI(report){
     if(assignPending(+sel.dataset.pending,sel.value)){ renderTRI(null); renderBanner(); render(); }});
   $("#trireport").innerHTML=!report?"":report.map(x=>
     `<div style="color:var(--${x.warn?"warn":x.ok?"ok":"bad"})"><b>${esc(x.file)}</b> — ${esc(x.msg)}</div>`).join("");
+  if(typeof paintTriButtons==="function") paintTriButtons();
 }
 
 let ROLL_VIEW=null;
@@ -2057,19 +2062,32 @@ function parseCSV(text){
   return n;
 }
 
+function paintTriButtons(){
+  const n=Object.keys(TRI).length;
+  const hyb=["hyb6535","hyb5050","hyb1585","eqsav","arb","debt7"].filter(k=>TRI[k]).length;
+  const label = n ? `TRI ${n}` : "Load TRI";
+  const hdr=$("#tri-hdr-label"); if(hdr) hdr.textContent=label;
+  const sub=$("#home-tri-sub");
+  if(sub) sub.textContent = n
+    ? `${n} series loaded (${hyb} hybrid/debt). Click to reload.`
+    : "NIFTY 100 / Mid / Small + hybrid 65:35, 50:50, 15:85, equity savings, arbitrage, 7% debt. No login.";
+}
+
 function renderBanner(){
   const f=triFreshness();
   const el=$("#tribanner"); if(!el) return;
-  if(f.state==="fresh"){ el.innerHTML=""; return; }
-  const [kind,msg] =
-    f.state==="none" ? ["warn","<b>No benchmark data loaded.</b> Alpha and capture ratios are disabled."]
-  : f.state==="due" ? ["warn",`<b>Benchmark data is a month behind.</b> Newest index value is ${f.newest}.`]
-  : ["bad", `<b>Benchmark data is ${f.days} days old.</b> Update recommended.`];
+  paintTriButtons();
+  const n=f.count||0;
+  const hyb=["hyb6535","hyb5050","hyb1585","eqsav","arb","debt7"].filter(k=>TRI[k]).length;
+  const kind = f.state==="none"?"warn": f.state==="fresh"?"ok":"warn";
+  const msg = f.state==="none"
+    ? "<b>No TRI pack loaded.</b> Alpha, capture and hybrid scores stay blank until you load it."
+    : `<b>${n} TRI series</b> (hybrid/debt ${hyb}/6)${f.newest?` · newest ${f.newest}`:""}${f.state==="fresh"?"":f.state==="due"?` · a month behind`: ` · ${f.days} days old`}.`;
   el.innerHTML=`<div class="note ${kind}" style="margin-bottom:18px">
     <div class="row spread" style="gap:12px">
       <span style="flex:1;min-width:200px">${msg}</span>
       <button id="tri-update" class="primary" style="padding:8px 16px;font-size:13px">
-        <i class="fa-solid fa-rotate"></i>Update now</button>
+        <i class="fa-solid fa-cloud-arrow-down"></i>${n?"Reload TRI + hybrid":"Load TRI + hybrid pack"}</button>
     </div></div>`;
   $("#tri-update").onclick=openUpdate;
 }
@@ -3744,9 +3762,13 @@ function boot(){
   wireSWP();
   wireSIP();
   $$(".home-card").forEach(b=>b.onclick=()=>{
+    if(b.id==="home-tri"){ openUpdate(); return; }
     const v=b.dataset.go;
+    if(!v) return;
     if(v==="rate") showRate("pick"); else showView(v);
   });
+  $("#tri-load-hdr") && ($("#tri-load-hdr").onclick=openUpdate);
+  $("#tri-load-setup") && ($("#tri-load-setup").onclick=openUpdate);
   window.addEventListener("beforeprint", paintPrintHead);
   restoreTRI();
   renderTRI(null); renderBanner(); render(); showView("home");
