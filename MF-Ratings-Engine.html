@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MF Ratings — Gohil Insurance (v9.1)</title>
-<!-- v9.1 (Aug 2026): quant & statement parser unchanged from v8.
-     TRI guidance updated — NSE /BackPage endpoint works without login via GET-TRI-DATA.py.
-     No change to scoring formulas or FPA rules. -->
+<title>MF Ratings — Gohil Insurance (v9.2)</title>
+<!-- v9.2 (Aug 2026): Load GET-TRI-DATA.py JSON (points[]) AND v2 bundles (d[]).
+     Auto-fetch published TRI from GitHub/jsDelivr (CORS *). Persist to localStorage.
+     NSE browser fetch still CORS-blocked — that path is a fallback only. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23272262%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231d75bd%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Csvg%20x%3D%2217%22%20y%3D%228%22%20width%3D%2230%22%20height%3D%2248%22%20viewBox%3D%220%200%20875%201157%22%3E%3Cg%20transform%3D%22translate%280%2C1157%29%20scale%28.1%2C-.1%29%22%20fill%3D%22%23fff%22%20stroke%3D%22none%22%3E%20%3Cpath%20d%3D%22M5510%2011483%20c-2326%20-94%20-4392%20-1659%20-5135%20-3888%20-207%20-620%20-288%20-1126%20-289%20-1800%20-1%20-365%206%20-476%2044%20-773%20242%20-1854%201409%20-3490%203085%20-4322%20747%20-371%201520%20-568%202385%20-610%20282%20-13%201986%20-13%202105%200%20472%2053%20835%20383%20943%20855%2020%2089%2031%202981%2012%203214%20-49%20606%20-349%201120%20-850%201456%20-279%20186%20-684%20314%20-1002%20315%20l-48%200%20-2%20-1582%20-3%20-1583%20-23%20-80%20c-93%20-329%20-340%20-577%20-660%20-662%20-283%20-76%20-949%203%20-1457%20172%20-1816%20605%20-2898%202408%20-2565%204273%20189%201057%20857%202018%201790%202575%20386%20230%20814%20392%201250%20473%20294%2054%20325%2056%201135%2064%20817%208%20799%207%201027%2065%20686%20174%201245%20772%201377%201471%2018%2092%2041%20293%2041%20357%200%2016%20-79%2017%20-1542%2015%20-849%20-1%20-1577%20-3%20-1618%20-5z%22%2F%3E%20%3Cpath%20d%3D%22M7360%208065%20c-349%20-70%20-590%20-369%20-590%20-730%200%20-678%20818%20-1000%201283%20-505%20211%20224%20259%20555%20123%20835%20-146%20300%20-486%20466%20-816%20400z%22%2F%3E%20%3C%2Fg%3E%3C%2Fsvg%3E%3C%2Fsvg%3E">
 <!-- Pico.css (github.com/picocss/pico, 16.7k stars) — semantic, class-light,
      dark mode built in. The stylesheet below carries the layout and works on
@@ -503,6 +503,9 @@ article,section{margin:0}
   </div>
   <div id="up-log" class="tiny" style="margin-bottom:14px"></div>
   <div id="up-routes" class="hidden">
+    <button id="up-github" class="primary" style="width:100%;justify-content:center;margin-bottom:12px">
+      <i class="fa-solid fa-cloud-arrow-down"></i> Load TRI pack now (one click)
+    </button>
     <div class="choices">
       <a class="choice" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
         <span class="ic"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
@@ -1173,6 +1176,7 @@ const INDICES=[
   {key:"hyb1585",  name:"NIFTY 50 Hybrid Composite Debt 15:85",  pat:/15\s*:?\s*85/},
   {key:"eqsav",    name:"NIFTY Equity Savings TRI",       pat:/equity\s*savings/},
   {key:"arb",      name:"NIFTY 50 Arbitrage TRI",         pat:/arbitrage/},
+  {key:"debt7",    name:"AAA / G-Sec 7% Total Return (debt sleeve)", pat:/g-sec|debt\s*sleeve|aaa/},
 ];
 const IDX_BY_KEY=Object.fromEntries(INDICES.map(i=>[i.key,i]));
 const TRI={};                       // key -> {series, rows, from, to, file, imported}
@@ -1409,26 +1413,95 @@ function exportTRIBundle(){
   return n;
 }
 async function importTRIBundle(file){
-  const j=JSON.parse(await file.text());
-  if(j.format!=="mf-ratings-tri-bundle") throw new Error("not a TRI bundle file");
+  const text=await file.text();
+  if(text.charCodeAt(0)===0x50 && text.charCodeAt(1)===0x4b)
+    throw new Error("that is a ZIP — unzip it and pick MF-TRI-bundle.json");
+  let j;
+  try{ j=JSON.parse(text); }
+  catch{ throw new Error("not JSON — pick MF-TRI-bundle.json, not the HTML or .py file"); }
+  return ingestBundleObject(j);
+}
+
+function isoToMs(iso){
+  const m=String(iso).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return NaN;
+  return Date.UTC(+m[1], +m[2]-1, +m[3]);
+}
+function pairsFromIndex(v){
+  if(!v || typeof v!=="object") return [];
+  const raw = Array.isArray(v.d) && v.d.length ? v.d
+            : Array.isArray(v.points) && v.points.length ? v.points
+            : [];
+  return raw.map(([a,b])=>{
+    const val=+b;
+    if(!(val>0)) return null;
+    if(typeof a==="string"){ const ms=isoToMs(a); return ms>0?[ms,val]:null; }
+    if(typeof a==="number"){
+      if(a>1e12) return [a,val];          // already ms
+      if(a>1e9)  return [a*1000,val];     // unix seconds
+      return [a*DAY,val];                 // unix days (v2 bundle)
+    }
+    return null;
+  }).filter(Boolean);
+}
+function ingestBundleObject(j){
+  if(!j || typeof j!=="object") throw new Error("not a TRI bundle file");
+  if(!j.indices || typeof j.indices!=="object")
+    throw new Error("not a TRI bundle file — need an indices object (MF-TRI-bundle.json)");
   let n=0;
-  for(const [key,v] of Object.entries(j.indices||{})){
-    if(!IDX_BY_KEY[key]||!Array.isArray(v.d)||v.d.length<MIN_TRI_ROWS) continue;
+  for(const [key,v] of Object.entries(j.indices)){
+    if(!IDX_BY_KEY[key]) continue;
+    const pairs=pairsFromIndex(v);
+    if(pairs.length<MIN_TRI_ROWS) continue;
     try{
-      const t=buildTRIEntry(key, v.d.map(([day,val])=>[day*DAY,val]),
-                            v.files||[v.file||"bundle"]);
+      const t=buildTRIEntry(key, pairs, [v.file||v.nseName||"bundle"]);
       t.file=v.file||"bundle";
-      TRI[key]=t;
+      TRI[key]=t; n++;
     }catch(e){ continue; }
-    n++;
   }
   if(!n) throw new Error("bundle contained no usable indices");
-  // v2 bundles also carry the distributor details, so one file restores both.
   if(j.brand && typeof j.brand==="object"){
     brandSet(j.brand);
     if(typeof paintBrandFields==="function"){ paintBrandFields(); renderBrandPreview(); }
   }
+  persistTRI();
   return n;
+}
+
+const TRI_LS="gohil-mf-tri-v1";
+const BUNDLE_URLS=[
+  "https://cdn.jsdelivr.net/gh/Harshdpsinh/gohil-mf-studio@main/MF-TRI-bundle.json",
+  "https://raw.githubusercontent.com/Harshdpsinh/gohil-mf-studio/main/MF-TRI-bundle.json",
+];
+function persistTRI(){
+  try{
+    const indices={};
+    for(const [k,t] of Object.entries(TRI)){
+      indices[k]={name:IDX_BY_KEY[k]?.name||k,
+        points:(t.pairs||[]).map(([ms,v])=>[new Date(ms).toISOString().slice(0,10), +(+v).toFixed(4)])};
+    }
+    localStorage.setItem(TRI_LS, JSON.stringify({version:1, source:"local", indices}));
+  }catch(e){ console.warn("TRI persist failed", e); }
+}
+function restoreTRI(){
+  try{
+    const j=JSON.parse(localStorage.getItem(TRI_LS)||"null");
+    if(j && j.indices) ingestBundleObject(j);
+  }catch(e){}
+}
+async function fetchPublishedBundle(onLine){
+  let last="no URL tried";
+  for(const url of BUNDLE_URLS){
+    try{
+      onLine && onLine("Loading published TRI pack…");
+      const r=await fetch(url, {cache:"no-cache"});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const j=await r.json();
+      const n=ingestBundleObject(j);
+      return {ok:true, n, url};
+    }catch(e){ last=e.message||String(e); }
+  }
+  return {ok:false, reason:last};
 }
 
 /* ---------- the update button ----------
@@ -2085,14 +2158,21 @@ async function openUpdate(){
   const line=(t,c)=>{const d=document.createElement("div");
     d.style.cssText="padding:2px 0;"+(c?`color:var(--${c})`:"color:var(--ink2)");
     d.innerHTML=t; log.appendChild(d);};
+  const pub=await fetchPublishedBundle(t=>line(t));
+  if(pub.ok){
+    line(`Loaded <b>${pub.n}</b> TRI series. Alpha and capture will now score.`,"ok");
+    renderTRI(null); renderBanner(); render();
+    setStatus(`${pub.n} TRI series ready.`,"ok");
+    setTimeout(()=>$("#upmodal").classList.add("hidden"), 900);
+    return;
+  }
   const r=await attemptTRIFetch(t=>line(t));
   if(r.ok){
     line("Fetch succeeded — "+esc(r.note),"ok");
-    line("Import the file below.","");
   }else{
-    line(`Direct fetch failed: <code>${esc(r.reason)}</code>`,"bad");
-    line(esc(r.detail),"");
-    line("This is a browser restriction, not a fault on your machine — NSE requires a <code>Referer</code> header, which scripts are forbidden from setting. A plain script has no such limit, which is what the auto-fetcher is.","warn");
+    line(`Direct NSE fetch failed: <code>${esc(r.reason)}</code>`,"bad");
+    line(esc(r.detail||""),"");
+    line("Use <b>Load TRI pack now</b> or pick <code>MF-TRI-bundle.json</code> (not the zip).","warn");
   }
   $("#up-routes").classList.remove("hidden");
 }
@@ -3371,6 +3451,18 @@ function boot(){
   });
 
   $("#up-close").onclick=()=>$("#upmodal").classList.add("hidden");
+  $("#up-github") && ($("#up-github").onclick=async ()=>{
+    const log=$("#up-log");
+    const line=(t,c)=>{const d=document.createElement("div");
+      d.style.cssText="padding:2px 0;"+(c?`color:var(--${c})`:"color:var(--ink2)");
+      d.innerHTML=t; log.appendChild(d);};
+    const pub=await fetchPublishedBundle(t=>line(t));
+    if(pub.ok){
+      renderTRI(null); renderBanner(); render();
+      $("#upmodal").classList.add("hidden");
+      setStatus(`Bundle loaded: ${pub.n} index(es) ready.`,"ok");
+    }else setStatus("Could not reach the published pack — "+pub.reason,"bad");
+  });
   $("#up-bundle").onchange=async e=>{
     const f=e.target.files[0]; if(!f) return;
     try{ const n=await importTRIBundle(f); renderTRI(null); renderBanner(); render();
@@ -3388,7 +3480,15 @@ function boot(){
   };
   wireBrand();
   window.addEventListener("beforeprint", paintPrintHead);
+  restoreTRI();
   renderTRI(null); renderBanner(); render(); showRate("pick");
+  if(!Object.keys(TRI).length){
+    fetchPublishedBundle().then(r=>{
+      if(!r.ok) return;
+      renderTRI(null); renderBanner(); render();
+      setStatus(`${r.n} TRI series loaded automatically.`,"ok");
+    });
+  }
 }
 document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot):boot();
 

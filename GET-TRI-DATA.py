@@ -24,7 +24,7 @@ Usage:
 """
 from __future__ import annotations
 import argparse, json, os, ssl, sys, time, urllib.request, urllib.error
-from datetime import date
+from datetime import date, datetime, timezone
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -112,6 +112,20 @@ def write_csv(path: str, points: list[list]) -> None:
             y, m, day = d.split("-")
             f.write("%s-%s-%s,%.4f\n" % (day, m, y, v))
 
+def iso_to_uday(iso: str) -> int:
+    y, m, d = (int(x) for x in iso.split("-"))
+    return int(datetime(y, m, d, tzinfo=timezone.utc).timestamp() // 86400)
+
+def index_payload(display_name: str, nse_name: str, pts: list) -> dict:
+    return {
+        "name": display_name,
+        "nseName": nse_name,
+        "points": pts,
+        "file": "bundle",
+        "rows": len(pts),
+        "d": [[iso_to_uday(d), v] for d, v in pts],
+    }
+
 def compute_composite(base_pts: list[list], start_val: float, w_eq: float, w_debt: float, w_arb: float) -> list[list]:
     daily_debt = (1.0 + 0.070) ** (1.0 / 250.0) - 1.0
     daily_arb  = (1.0 + 0.058) ** (1.0 / 250.0) - 1.0
@@ -141,6 +155,7 @@ def main() -> int:
     print("================================================================\n")
 
     bundle = {
+        "format": "mf-ratings-tri-bundle",
         "version": 1,
         "source": "NSE niftyindices.com (Public MVC Endpoints & Composite Series)",
         "fetchedAt": date.today().isoformat(),
@@ -172,7 +187,7 @@ def main() -> int:
             if key == "nifty100":
                 base_points = pts
             print(f"{len(pts):5d} rows  {pts[0][0]} → {pts[-1][0]}")
-            bundle["indices"][key] = {"name": display_name, "nseName": chosen_name, "points": pts}
+            bundle["indices"][key] = index_payload(display_name, chosen_name, pts)
             write_csv(os.path.join(bench, f"{key}_tri.csv"), pts)
             ok += 1
         else:
@@ -205,7 +220,7 @@ def main() -> int:
 
         if pts:
             print(f"{len(pts):5d} rows  {pts[0][0]} → {pts[-1][0]}")
-            bundle["indices"][key] = {"name": display_name, "nseName": display_name, "points": pts}
+            bundle["indices"][key] = index_payload(display_name, display_name, pts)
             write_csv(os.path.join(bench, f"{key}_tri.csv"), pts)
             ok += 1
         else:
