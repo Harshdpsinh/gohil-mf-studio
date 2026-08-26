@@ -387,7 +387,7 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
 <!-- PORTFOLIO -->
 <section id="view-pf" class="hidden">
   <div class="title">Review a client portfolio</div>
-  <p class="lede">Upload the statement or paste the holdings. Every holding is checked against the same seven parameters, then judged on your FPA rules — continue, hold the SIP, or switch out.</p>
+  <p class="lede">Upload the MFD Excel (transaction book), CAS PDF or paste. Every live scheme is reviewed — lumpsum, SIP, STP — not SIP-only. Rank 1 in its category stays Continue. Tax is advisor-only.</p>
 
   <div id="pf-input" class="card">
     <div class="choices two" style="margin-bottom:14px">
@@ -678,6 +678,17 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
   <div class="eyebrow" style="margin-bottom:6px">First and last windows</div>
   <div id="roll-sample" style="margin-bottom:16px"></div>
   <button id="roll-dl" class="primary" style="width:100%;justify-content:center"><i class="fa-solid fa-download"></i>Download every window as CSV</button>
+</div></div>
+
+<div id="taxmodal" class="overlay hidden advisor-only"><div style="max-width:720px">
+  <div class="row spread" style="margin-bottom:8px">
+    <div>
+      <p class="eyebrow">Advisor only — not on the client PDF</p>
+      <h3 id="tax-title" style="font-size:16px;font-weight:650">Tentative tax if switched</h3>
+    </div>
+    <button id="tax-close" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div id="tax-body"></div>
 </div></div>
 
 <div id="modal" class="overlay hidden"><div style="max-width:480px">
@@ -2170,7 +2181,16 @@ function analysePortfolio(results){
   if(dupes.length){
     const tot=dupes.reduce((a,d)=>a+d.value,0);
     flags.push({level:"info", what:"Duplicate folios",
-      text:`${dupes.length} scheme(s) held across multiple folios (${inr(tot)} total).`});
+      text:`${dupes.length} scheme(s) held across multiple folios (${inr(tot)} total). Folios are merged for scoring.`});
+  }
+  const have=new Set(classes.map(c=>c.key));
+  const missing=[];
+  if(!have.has("Mid Cap")) missing.push("Mid Cap");
+  if(!have.has("Small Cap")) missing.push("Small Cap");
+  if(!have.has("Large Cap") && !have.has("Diversified Equity")) missing.push("Large / Flexi core");
+  if(missing.length){
+    flags.push({level:"info", what:"Mix note (not a switch)",
+      text:`Book has no ${missing.join(" / ")} sleeve. That is an allocation observation only — it is not a reason to exit a rank-1 fund in another category.`});
   }
 
   return {total, classes, amcs, funds, dupes, equity, flags,
@@ -2236,7 +2256,11 @@ function reviewHolding(row,cat,h){
 
   if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("Score metrics missing."); return out; }
 
-  if(beatBoth===scored && !sdWorse){
+  /* Rank 1 in its own SEBI category is never switched into another category. */
+  if(row.rank===1 && row.qualified){
+    out.verdict="HEALTHY";
+    out.reasons.push(`Rank 1 of ${cat.cfg.name} on the 5 rating metrics. Continue — do not replace with a different category.`);
+  } else if(beatBoth===scored && !sdWorse){
     out.verdict="HEALTHY";
     out.reasons.push(`Clears the 5 rating metrics (3Y rolling, Alpha, Sortino, Up / Down capture) vs benchmark and peers. Volatility is not worse than both.`);
   } else if(sdWorse && rollFail && cagrFail){
@@ -2249,16 +2273,33 @@ function reviewHolding(row,cat,h){
     if(failed.length) out.reasons.push(`Watch: ${failed.join(", ")}.`);
   }
 
+  const lockedLots=(h&&h.lots||[]).filter(l=>{
+    const elss=/elss|tax.?sav/i.test((h.fileType||"")+" "+(h.catName||"")+" "+(cat.cfg&&cat.cfg.id||""));
+    return elss && (l.days!=null) && l.days<1095;
+  });
+  if(out.verdict==="SWITCH" && lockedLots.length){
+    out.verdict="HOLD";
+    out.reasons.push(`ELSS lock-in: ${lockedLots.length} lot(s) still inside 3 years — cannot switch those units yet.`);
+  }
+
   if(h && h.swp){
     out.reasons.push(`Active SWP of ₹${h.swp.toLocaleString("en-IN")}/mth is connected to this holding.`);
+  }
+  if(h && h.sip){
+    out.reasons.push(`Running SIP ${inr(h.sip)}/month.`);
+  }
+  if(h && h.stp){
+    out.reasons.push(`Running STP ${inr(h.stp)}${h.stpFreq?" "+h.stpFreq:""}${h.stpTarget?" → "+h.stpTarget:""}.`);
   }
   return out;
 }
 
-function suggestSwitch(cat,heldCodes){
-  const pool=cat.rows.filter(r=>r.s.pct!=null&&!heldCodes.has(r.code)&&(r.ageYears==null||r.ageYears>=3));
+function suggestSwitch(cat,heldCodes,heldRow){
+  const pool=cat.rows.filter(r=>r.qualified&&r.s.pct!=null&&!heldCodes.has(r.code)&&(r.ageYears==null||r.ageYears>=3));
   if(!pool.length) return null;
   const best=pool.slice().sort((a,b)=>b.s.pct-a.s.pct)[0];
+  if(heldRow && heldRow.rank===1) return null;
+  if(heldRow && best.s.pct<=(heldRow.s.pct||0)) return null;
   return best.s.pct>0.5?best:null;
 }
 
@@ -2275,24 +2316,50 @@ function parsePortfolio(text){
   return out;
 }
 
-function matchScheme(name){
+function matchScheme(name, opts={}){
   if(!UNIVERSE) return null;
   const target=normName(name);
-  let best=null,bestLen=1e9;
+  if(!target) return null;
+  const anyPlan=!!opts.anyPlan;
+  let best=null,bestLen=1e9,exact=null;
   for(const s of UNIVERSE){
-    const n=s.schemeName; if(!n||!isPlan(n)) continue;
+    const n=s.schemeName; if(!n) continue;
+    if(!anyPlan && !isPlan(n)) continue;
     const k=normName(n);
-    if(k===target) return {code:s.schemeCode,name:n,exact:true};
+    if(k===target){ exact={code:s.schemeCode,name:n,exact:true}; break; }
     if(k.includes(target)||target.includes(k)){
       if(n.length<bestLen){best={code:s.schemeCode,name:n,exact:false};bestLen=n.length;}
     }
   }
-  return best;
+  if(exact) return exact;
+  if(best) return best;
+  if(!anyPlan) return matchScheme(name,{anyPlan:true});
+  return null;
 }
 
 function categoryOf(schemeCategory){
   const c=(schemeCategory||"").toLowerCase();
   for(const cfg of CATEGORIES) if(cfg.match(c)) return cfg.id;
+  return null;
+}
+function typeToCat(t){
+  const s=(t||"").toLowerCase();
+  if(/taxsav|elss/.test(s)) return "elss";
+  if(/flexi/.test(s)) return "flexicap";
+  if(/large\s*&?\s*mid|largemid/.test(s)) return "largemid";
+  if(/large/.test(s)) return "largecap";
+  if(/mid/.test(s)) return "midcap";
+  if(/small/.test(s)) return "smallcap";
+  if(/value|contra/.test(s)) return "value";
+  if(/ultra/.test(s)) return "ultrashort";
+  if(/liquid|overnight/.test(s)) return "liquid";
+  if(/money market/.test(s)) return "moneymkt";
+  if(/gilt/.test(s)) return "gilt";
+  if(/arbitrage/.test(s)) return "arbitrage";
+  if(/equity savings/.test(s)) return "equitysav";
+  if(/balanced advantage|dynamic/.test(s)) return "baf";
+  if(/conservative hybrid/.test(s)) return "conshybrid";
+  if(/hybrid|multi asset/.test(s)) return "aggrhybrid";
   return null;
 }
 
@@ -2312,12 +2379,12 @@ async function runPortfolioReview(input){
     for(let i=0;i<entries.length;i++){
       const e=entries[i];
       pfStatus(`Matching ${i+1}/${entries.length}: ${e.name}`);
-      const m=e.matched||matchScheme(e.name);
+      const m=e.matched||matchScheme(e.name,{anyPlan:true});
       if(!m){ matched.push({...e,error:"no matching AMFI scheme found"}); continue; }
       const nav=await loadNav(m.code).catch(()=>null);
       if(!nav){ matched.push({...e,matched:m,error:"could not retrieve NAV history"}); continue; }
-      const catId=categoryOf(nav.meta.scheme_category);
-      const st=(PF.meta[normName(m.name)]||{}).schemeType||"";
+      let catId=categoryOf(nav.meta.scheme_category) || typeToCat(e.fileType||e.schemeType);
+      const st=(PF.meta[normName(m.name)]||{}).schemeType||e.fileType||"";
       matched.push({...e, matched:m, schemeCategory:nav.meta.scheme_category, catId, schemeType:st,
         error: catId?null:`Category "${nav.meta.scheme_category||"unknown"}" is outside supported equity/hybrid sets.`});
     }
@@ -2326,6 +2393,7 @@ async function runPortfolioReview(input){
     const missing=need.filter(id=>!S.cats[id]);
     for(let i=0;i<missing.length;i++){
       const cfg=CATEGORIES.find(c=>c.id===missing[i]);
+      if(!cfg) continue;
       pfStatus(`Analyzing ${cfg.name} (${i+1}/${missing.length})…`);
       await runCategory(cfg,{silent:true});
     }
@@ -2336,13 +2404,15 @@ async function runPortfolioReview(input){
     for(const m of matched){
       if(m.error||!m.catId){ results.push({...m,verdict:"NO_DATA",reasons:[m.error||"unclassified"]}); continue; }
       const cat=S.cats[m.catId];
-      const row=cat&&cat.rows.find(r=>r.code===m.matched.code);
+      const want=normName(m.matched.name);
+      const row=cat&&(cat.rows.find(r=>r.code===m.matched.code)
+        || cat.rows.find(r=>normName(r.name)===want)
+        || cat.rows.find(r=>normName(r.name).includes(want)||want.includes(normName(r.name))));
       if(!row){ results.push({...m,verdict:"NO_DATA",
-        reasons:[`Scheme not within current category filter scope.`]}); continue; }
+        reasons:[`Scheme not in the scored ${cat?cat.cfg.name:"category"} list (raise the fund cap in Setup if it was truncated).`]}); continue; }
       const rev=reviewHolding(row,cat,m);
-      rev.switchTo = (rev.verdict==="SWITCH"||rev.verdict==="HOLD")
-        ? suggestSwitch(cat,heldByCat[m.catId]) : null;
-      results.push({...m, ...rev, catName:cat.cfg.name});
+      rev.switchTo = rev.verdict==="SWITCH" ? suggestSwitch(cat,heldByCat[m.catId],row) : null;
+      results.push({...m, ...rev, catName:cat.cfg.name, rank:row.rank});
     }
     PF.holdings=matched; PF.results=results;
     pfStatus(`Reviewed ${results.length} holding(s).`,"ok");
@@ -2439,10 +2509,10 @@ function renderPortfolio(){
   $("#pfout").innerHTML=`
   ${letterheadHTML("Portfolio Review", PF.client)}
   <div class="stats" style="margin-top:18px">
-    ${[["Portfolio Value",totVal?inr(totVal):"—",`${R.length} holdings`],
-       ["Action Items",count("SWITCH")+count("HOLD"),"Switch or Hold SIP"],
-       ["Monthly SIP",totSip?inr(totSip):"—","Active inflow"],
-       ["Monthly SWP",totSwp?inr(totSwp):"—","Active withdrawal"]]
+    ${[["Portfolio Value",totVal?inr(totVal):"—",`${R.length} schemes`],
+       ["Amount invested",sum("invest")?inr(sum("invest")):"—","from statement lots"],
+       ["Monthly SIP",totSip?inr(totSip):"—","Running SIPs only"],
+       ["Switch candidates",count("SWITCH"),"same-category peer only"]]
       .map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("")}
   </div>
   ${coverageNote()}
@@ -2460,7 +2530,7 @@ function renderPortfolio(){
       <div class="row spread" style="margin-bottom:8px">
         <div style="flex:1;min-width:220px">
           <div style="font-weight:600">${esc(r.matched?r.matched.name:r.name)}</div>
-          <div class="tiny muted">${esc(r.catName||r.schemeCategory||"Unclassified")}${r.value?` · ${inr(r.value)} held`:""}${r.sip?` · SIP ${inr(r.sip)}/mth`:""}</div>
+          <div class="tiny muted">${esc(r.catName||r.schemeCategory||"Unclassified")}${r.rank?` · Rank ${r.rank}`:""}${r.invest?` · invested ${inr(r.invest)}`:""}${r.value?` · ${inr(r.value)} now`:""}${r.sip?` · SIP ${inr(r.sip)}/mth`:""}${r.stp?` · STP ${inr(r.stp)}`:""}${r.folios>1?` · ${r.folios} folios`:""}</div>
         </div>
         <span class="verdict ${VCLS[V.cls]}">${V.label}</span>
       </div>
@@ -2471,12 +2541,16 @@ function renderPortfolio(){
         ${evidenceTable(r.evidence,!!(S.cats[r.catId]&&S.cats[r.catId].bmM))}
       </details>`:""}
       ${r.switchTo?`<div class="note info" style="margin-top:12px">
-        <div class="eyebrow" style="color:var(--acc);margin-bottom:4px">Suggested Category Peer</div>
+        <div class="eyebrow" style="color:var(--acc);margin-bottom:4px">Same-category alternative (not a different asset class)</div>
         <div style="font-weight:600">${esc(r.switchTo.name)}</div>
-        <div class="tiny muted" style="margin-top:4px">Score ${r.switchTo.s.total}/${r.switchTo.s.max} · Rank ${r.switchTo.rank}</div>
+        <div class="tiny muted" style="margin-top:4px">Score ${r.switchTo.s.total}/${r.switchTo.s.max} · Rank ${r.switchTo.rank} in ${esc(r.catName||"category")}</div>
+      </div>`:""}
+      ${r.verdict==="SWITCH"?`<div class="row no-print advisor-only" style="margin-top:10px">
+        <button class="ghost tax-btn" data-tax="${PF.results.indexOf(r)}"><i class="fa-solid fa-file-invoice"></i>Advisor: tax if switched</button>
       </div>`:""}
     </div>`;}).join("")}`;}).join("")}
   ${disclaimerHTML()}`;
+  $$(".tax-btn").forEach(b=>b.onclick=()=>showAdvisorTax(+b.dataset.tax));
 }
 
 function exportPortfolioCSV(){
@@ -2499,40 +2573,102 @@ function exportPortfolioCSV(){
 }
 
 function estimateTax(r){
-  const value=r.value||0, cost=r.invest;
-  const cls=assetClassOf(r.catName||r.schemeCategory, r.schemeType);
+  const cls=assetClassOf(r.catName||r.schemeCategory, r.schemeType||r.fileType);
   const eqW=EQUITY_WEIGHT[cls];
   const eq=eqW==null ? null : eqW>=0.65;
-  if(!value) return {ok:false, note:"No current value on the statement."};
-  if(cost==null || !(+cost>0)) return {ok:false, eq, cls, note:"Cost/invested amount not on the statement — tax not computed."};
-  const gain=value-cost;
-  if(gain<=0) return {ok:true, eq, cls, gain, tax:0, note:"No capital gain on stated cost."};
-  if(eq){
-    const ltcg=Math.max(0, gain-125000)*0.125;
-    const stcg=gain*0.20;
-    return {ok:true, eq:true, cls, gain, ltcg, stcg,
-      note:`Equity-oriented (${cls}). If held >12 months: LTCG 12.5% above ₹1.25L exemption ≈ ${inr(ltcg)}. If sold within 12 months: STCG 20% ≈ ${inr(stcg)}.`};
+  const elss=/elss|tax.?sav/i.test(cls+" "+(r.fileType||"")+" "+(r.catName||""));
+  const lots=(r.lots||[]).filter(l=>!l.status || /live/i.test(l.status));
+  const value=r.value||lots.reduce((a,l)=>a+(l.value||0),0);
+  const cost=r.invest!=null?r.invest:lots.reduce((a,l)=>a+(l.amount||0),0);
+
+  if(!value) return {ok:false, eq, cls, elss, lots:[], note:"No current value on the statement."};
+  if(!(cost>0) && !lots.length) return {ok:false, eq, cls, elss, lots:[], note:"Cost not on the statement — tax not computed."};
+
+  let ltcgGain=0, stcgGain=0, slabGain=0, locked=0, lockedValue=0;
+  const lotRows=[];
+  if(lots.length){
+    for(const l of lots){
+      const days=l.days!=null?l.days:null;
+      const gain=(l.value||0)-(l.amount||0);
+      const lock=elss && days!=null && days<1095;
+      if(lock){ locked++; lockedValue+=l.value||0; lotRows.push({...l, gain, bucket:"ELSS lock-in", tax:0}); continue; }
+      if(!eq){
+        slabGain+=Math.max(0,gain);
+        lotRows.push({...l, gain, bucket:"Debt/other — slab", tax:null});
+      } else if(days!=null && days<=365){
+        stcgGain+=Math.max(0,gain);
+        lotRows.push({...l, gain, bucket:"STCG 20%", tax:Math.max(0,gain)*0.20});
+      } else {
+        ltcgGain+=Math.max(0,gain);
+        lotRows.push({...l, gain, bucket:"LTCG 12.5%", tax:Math.max(0,gain)*0.125});
+      }
+    }
+  } else {
+    const gain=value-cost;
+    if(gain<=0) return {ok:true, eq, cls, elss, gain, tax:0, lots:[], note:"No capital gain on stated cost."};
+    if(eq) ltcgGain=gain; else slabGain=gain;
   }
-  return {ok:true, eq:false, cls, gain,
-    note:`${cls||"Non-equity"}. Entire gain ${inr(gain)} is taxed at the client's income-tax slab (no indexation).`};
+
+  const ltcgTax=Math.max(0, ltcgGain)*0.125; // exemption applied at book level
+  const stcgTax=stcgGain*0.20;
+  const gain=(value-(cost||0));
+  return {ok:true, eq, cls, elss, gain, ltcgGain, stcgGain, slabGain, ltcgTax, stcgTax,
+          locked, lockedValue, lots:lotRows,
+          note: eq
+            ? `Equity-oriented (${cls}). LTCG 12.5% on lots held >12 months (₹1.25L exemption is across the book, not per fund). STCG 20% on lots ≤12 months.${elss?` ELSS: ${locked} lot(s) still locked.` : ""}`
+            : `${cls||"Non-equity"}. Gains taxed at the client's income-tax slab (no indexation).`};
+}
+
+function showAdvisorTax(i){
+  const r=PF.results[i]; if(!r) return;
+  const t=estimateTax(r);
+  const q=x=>x==null?"—":inr(x);
+  $("#tax-title").textContent = "Tax if "+(r.matched?r.matched.name:r.name)+" is switched";
+  $("#tax-body").innerHTML=`
+    <div class="note warn">Client PDF does not include this. Tentative only — actual tax depends on FIFO at the AMC, grand LTCG exemption, and the client's slab.</div>
+    <div class="card" style="margin-top:10px">
+      <div class="rpt-line"><span>Invested (cost)</span><b>${q(r.invest)}</b></div>
+      <div class="rpt-line"><span>Current value</span><b>${q(r.value)}</b></div>
+      <div class="rpt-line"><span>Unrealised gain</span><b>${q(t.gain)}</b></div>
+      <div class="rpt-line"><span>Asset class</span><b>${esc(t.cls||"—")} ${t.eq?"· equity":"· non-equity"}</b></div>
+      ${t.eq?`<div class="rpt-line"><span>STCG 20% (lots ≤12m)</span><b>${q(t.stcgTax)}</b></div>
+        <div class="rpt-line"><span>LTCG 12.5% on lots >12m (before ₹1.25L exemption)</span><b>${q(t.ltcgTax)}</b></div>`:
+        `<div class="rpt-line"><span>Gain at slab</span><b>${q(t.slabGain)}</b></div>`}
+      ${t.locked?`<div class="rpt-line"><span>ELSS still locked</span><b>${t.locked} lots · ${q(t.lockedValue)}</b></div>`:""}
+    </div>
+    ${t.lots&&t.lots.length?`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
+      <th>Purchase</th><th>Type</th><th>Days</th><th>Cost</th><th>Value</th><th>Gain</th><th>Bucket</th></tr></thead><tbody>
+      ${t.lots.map(l=>`<tr>
+        <td>${esc(l.date||"—")}</td><td>${esc(l.type||"")}</td>
+        <td class="num">${l.days??"—"}</td>
+        <td class="num">${q(l.amount)}</td><td class="num">${q(l.value)}</td>
+        <td class="num">${q(l.gain)}</td><td>${esc(l.bucket)}</td></tr>`).join("")}
+      </tbody></table></div>`:""}
+    <p class="tiny muted" style="margin-top:10px">${esc(t.note)}</p>`;
+  $("#taxmodal").classList.remove("hidden");
 }
 
 function exportAdvisorTax(){
   if(!PF.results.length){ setStatus("Run a review first.","warn"); return; }
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const L=[["Scheme","Verdict","Category","Current value","Cost (invested)","Gain","Asset class","Equity-oriented?","LTCG 12.5% after 1.25L (if >12m)","STCG 20% (if ≤12m)","Slab gain (debt/gold)","Note"]
+  const L=[["Scheme","Verdict","Category","Invested","Current","Gain","Class","Equity?","LTCG gain >12m","LTCG tax 12.5% before exemption","STCG gain ≤12m","STCG tax 20%","Slab gain","Locked ELSS lots","Locked value","Note"]
     .map(q).join(",")];
+  let ltcgBook=0;
   for(const r of PF.results){
     const t=estimateTax(r);
+    if(t.ltcgGain) ltcgBook+=t.ltcgGain;
     L.push([r.matched?r.matched.name:r.name, (VERDICTS[r.verdict]||{}).label||"", r.catName||"",
-      r.value??"", r.invest??"", t.gain??"", t.cls||"", t.eq==null?"":(t.eq?"yes":"no"),
-      t.ltcg??"", t.stcg??"", t.eq===false?(t.gain??""):"", t.note||""].map(q).join(","));
+      r.invest??"", r.value??"", t.gain??"", t.cls||"", t.eq==null?"":(t.eq?"yes":"no"),
+      t.ltcgGain??"", t.ltcgTax??"", t.stcgGain??"", t.stcgTax??"", t.slabGain??"",
+      t.locked??"", t.lockedValue??"", t.note||""].map(q).join(","));
   }
+  const exemption=Math.min(125000, ltcgBook);
   const who=(PF.client||"").trim();
   saveBlob(
     `"ADVISOR ONLY — do not share with the client"\n`+
     brandCSVHeader("Advisor tax worksheet"+(who?" — "+who:""))+
-    `"Rules","Equity LTCG 12.5% above ₹1.25 lakh (FY 2024-25+); equity STCG 20%; debt/gold at slab with no indexation. Holding period is not on most statements — both equity legs are shown."\n\n`+
+    `"Book LTCG (equity lots >12m)",${ltcgBook}\n"₹1.25L exemption (once for the year)",${exemption}\n"LTCG after exemption",${Math.max(0,ltcgBook-exemption)}\n"LTCG tax 12.5% after exemption",${(Math.max(0,ltcgBook-exemption)*0.125).toFixed(0)}\n`+
+    `"Rules","Lot dates from the statement. Equity LTCG 12.5% above ₹1.25 lakh; STCG 20%; debt at slab. ELSS lots <3y cannot be redeemed."\n\n`+
     L.join("\n"),
     "ADVISOR-ONLY-tax"+(who?"-"+who.replace(/[^\w]+/g,"-").toLowerCase():"")+".csv"
   );
@@ -2953,16 +3089,21 @@ function dedupeHoldings(list){
   for(const h of list){
     const k=normName(h.name).slice(0,40);
     const prev=by.get(k);
-    if(!prev){ by.set(k,{...h, folios:1}); continue; }
+    if(!prev){ by.set(k,{...h, folios:h.folios||1, lots:h.lots?h.lots.slice():[]}); continue; }
     by.set(k,{
       name: prev.name.length>=h.name.length?prev.name:h.name,
       sip: (prev.sip||0)+(h.sip||0) || null,
       swp: (prev.swp||0)+(h.swp||0) || null,
+      stp: (prev.stp||0)+(h.stp||0) || null,
       value:(prev.value||0)+(h.value||0) || null,
       invest:(prev.invest||0)+(h.invest||0) || null,
-      folio: prev.folio||h.folio||"",
+      folio: [prev.folio,h.folio].filter(Boolean).join(", "),
       schemeType: prev.schemeType||h.schemeType||"",
-      folios: prev.folios+1,
+      fileType: prev.fileType||h.fileType||"",
+      stpFreq: prev.stpFreq||h.stpFreq||"",
+      stpTarget: prev.stpTarget||h.stpTarget||"",
+      lots: [...(prev.lots||[]), ...(h.lots||[])],
+      folios: (prev.folios||1)+(h.folios||1),
     });
   }
   return [...by.values()];
@@ -3046,7 +3187,126 @@ function readTable(rows,tbl){
   return out;
 }
 
+function looksLikeTxnBook(rows){
+  return rows.some(r=>r.some(c=>/folio\s*number\s*:/i.test(String(c||"")) && /type\s*:/i.test(String(c||""))))
+      || rows.some(r=>/trxn\s*date/i.test(String(r[1]||"")) && /trxn\s*type/i.test(String(r[2]||"")));
+}
+
+function parseIndianNum(v){
+  const n=parseFloat(String(v??"").replace(/[₹,\s%]/g,""));
+  return Number.isFinite(n)?n:null;
+}
+
+const TXN_TITLE=/^(.+?)\s*\(\s*Folio Number:\s*([^)]+)\)\s*Type:\s*(.+)$/i;
+
+function parseTxnBook(rows){
+  const clientCell=String((rows[0]&&rows[0][0])||"");
+  const client=clientCell.replace(/\[[^\]]+\]/,"").trim();
+  const folios=[];
+  let i=0;
+  const isBreak=first=>TXN_TITLE.test(first)||/sip details|stp details|portfolio summary/i.test(first);
+
+  while(i<rows.length){
+    const first=String(rows[i][0]||"").trim();
+    const tm=first.match(TXN_TITLE);
+    if(!tm){ i++; continue; }
+    const name=tm[1].replace(/\s+-\s+-\s+/g," - ").replace(/\s{2,}/g," ").trim();
+    const folio=tm[2].trim();
+    const fileType=tm[3].trim();
+    i++;
+    const lots=[];
+    let invest=null, value=null;
+    while(i<rows.length){
+      const r=rows[i]||[];
+      const a=String(r[0]||"").trim();
+      if(isBreak(a) && !/^total$/i.test(a)) break;
+      if(/^sr\.?$/i.test(a) && /trxn/i.test(String(r[1]||""))){ i++; continue; }
+      if(/^total$/i.test(a)){
+        invest=parseIndianNum(r[3]); value=parseIndianNum(r[12]);
+        i++; break;
+      }
+      const status=String(r[15]||"");
+      const ttype=String(r[2]||"");
+      const skip=/pre-rejection|adjusted/i.test(ttype+" "+status) || !/live/i.test(status);
+      if(!skip){
+        lots.push({
+          date:String(r[1]||"").trim(),
+          type:ttype,
+          amount:parseIndianNum(r[3])||0,
+          units:parseIndianNum(r[4])||0,
+          value:parseIndianNum(r[12])||0,
+          days:parseIndianNum(r[11]),
+          status:"LIVE",
+        });
+      }
+      i++;
+    }
+    if(invest==null) invest=lots.reduce((a,l)=>a+(l.amount||0),0);
+    if(value==null) value=lots.reduce((a,l)=>a+(l.value||0),0);
+    folios.push({name, folio, fileType, schemeType:fileType, invest, value, lots, sip:null, swp:null, stp:null});
+  }
+
+  let sipTotal=null, stpTotal=null, statedInvest=null, statedValue=null;
+  for(let k=0;k<rows.length;k++){
+    const a=String(rows[k][0]||"");
+    if(/sip details/i.test(a)){
+      k++; // header
+      k++;
+      while(k<rows.length){
+        const r=rows[k]||[];
+        const a0=String(r[0]||"");
+        if(/^total$/i.test(a0)){ sipTotal=parseIndianNum(r[1])||parseIndianNum(r[4]); break; }
+        if(/stp details|portfolio summary/i.test(a0)) break;
+        const sname=String(r[1]||"").trim();
+        const sfolio=String(r[2]||"").trim();
+        const samt=parseIndianNum(r[3]);
+        const running=/running|active/i.test(String(r[8]||r[9]||""));
+        if(sname && samt && running!==false){
+          const hit=folios.find(f=>f.folio===sfolio) ||
+                    folios.find(f=>normName(f.name).slice(0,24)===normName(sname).slice(0,24));
+          if(hit) hit.sip=(hit.sip||0)+samt;
+          else folios.push({name:sname,folio:sfolio,sip:samt,value:null,invest:null,lots:[],fileType:""});
+        }
+        k++;
+      }
+    }
+    if(/stp details/i.test(a)){
+      k++; k++;
+      while(k<rows.length){
+        const r=rows[k]||[];
+        const a0=String(r[0]||"");
+        if(/^total$/i.test(a0)){ stpTotal=parseIndianNum(r[1])||parseIndianNum(r[3]); break; }
+        if(/portfolio summary/i.test(a0)) break;
+        const sname=String(r[1]||"").trim();
+        const sfolio=String(r[2]||"").trim();
+        const samt=parseIndianNum(r[3]);
+        const freq=String(r[4]||"").trim();
+        const st=String(r[8]||r[9]||"");
+        let target="";
+        if(k+1<rows.length && /target scheme/i.test(String(rows[k+1][0]||""))){
+          target=String(rows[k+1][0]||"").replace(/target scheme:\s*/i,"").trim();
+        }
+        if(sname && samt && !/stop|cancel|terminated/i.test(st)){
+          const hit=folios.find(f=>f.folio===sfolio) ||
+                    folios.find(f=>normName(f.name).slice(0,24)===normName(sname).slice(0,24));
+          if(hit){ hit.stp=(hit.stp||0)+samt; hit.stpFreq=freq; hit.stpTarget=target; }
+        }
+        k++;
+      }
+    }
+    if(/total investment amount/i.test(a)) statedInvest=parseIndianNum(rows[k][1]);
+    if(/total current valuation/i.test(a)) statedValue=parseIndianNum(rows[k][1]);
+  }
+
+  const list=dedupeHoldings(folios);
+  list.stated={invest:statedInvest, value:statedValue, sip:sipTotal, swp:null};
+  list.client=client;
+  list.source="txn-book";
+  return list;
+}
+
 function rowsToHoldings(rows){
+  if(looksLikeTxnBook(rows)) return parseTxnBook(rows);
   const tables=findTables(rows);
   const hTables=tables.filter(t=>t.kind==="holdings");
   const sTables=tables.filter(t=>t.kind==="sip");
@@ -3143,16 +3403,20 @@ function reconcile(list){
 async function stageHoldings(list,sourceLabel){
   pfStatus("Loading AMFI scheme list to match holdings…");
   await loadUniverse(n=>pfStatus(`Loading AMFI scheme list — ${n.toLocaleString()}…`));
+  if(list.client && !($("#pfclient").value||"").trim()){
+    $("#pfclient").value=list.client; PF.client=list.client;
+  }
   STAGED.rows=list.map(h=>{
-    const m=matchScheme(h.name);
+    const m=matchScheme(h.name,{anyPlan:true});
     return {...h, matched:m, keep:!!m,
             confidence: !m?"none" : m.exact?"exact"
               : (normName(m.name)===normName(h.name)?"exact":"fuzzy")};
   });
   STAGED.recon=reconcile(list);
+  STAGED.client=list.client||"";
   renderStaged(sourceLabel);
   const ok=STAGED.rows.filter(r=>r.keep).length;
-  pfStatus(`Read ${list.length} holding(s); ${ok} matched.`, ok?"ok":"err");
+  pfStatus(`Read ${list.length} holding(s); ${ok} matched.`+(list.stated&&list.stated.value?` Statement current ${inr(list.stated.value)}.`:"") , ok?"ok":"err");
 }
 
 function renderStaged(sourceLabel){
@@ -3164,20 +3428,23 @@ function renderStaged(sourceLabel){
   <div class="card">
     <div class="row spread" style="margin-bottom:10px">
       <div><div class="eyebrow">Holdings from ${esc(sourceLabel)}</div>
-        <div class="tiny muted">${R.filter(r=>r.keep).length} of ${R.length} verified</div></div>
+        <div class="tiny muted">${R.filter(r=>r.keep).length} of ${R.length} verified${
+          (STAGED.recon||[]).length? " · "+STAGED.recon.map(c=>c.label+": "+(c.ok?"matches":"diff "+Math.round(c.diff))).join(" · "):""}</div></div>
       <div class="row">
         <button id="pfstagerun" class="primary"><i class="fa-solid fa-check"></i>Run Review</button>
       </div>
     </div>
     <div class="tbl-wrap" style="max-height:340px">
       <table><thead><tr><th style="width:26px"></th><th>Scheme in File</th>
-        <th style="text-align:left">Matched AMFI Scheme</th><th>SIP</th><th>Value</th></tr></thead>
+        <th style="text-align:left">Matched AMFI Scheme</th><th>Type</th><th>Invested</th><th>Current</th><th>SIP</th></tr></thead>
       <tbody>${R.map((r,i)=>`<tr${r.keep?"":' style="opacity:.45"'}>
         <td><input type="checkbox" data-keep="${i}" ${r.keep?"checked":""} ${r.matched?"":"disabled"} style="width:auto"></td>
-        <td>${esc(r.name)}</td>
+        <td>${esc(r.name)}${r.folios>1?` <span class="pill">${r.folios} folios</span>`:""}${r.stp?` <span class="pill">STP</span>`:""}</td>
         <td style="text-align:left">${r.matched?esc(r.matched.name):'<span class="muted">not found</span>'} ${badge(r.confidence)}</td>
-        <td class="num">${r.sip?"₹"+r.sip.toLocaleString():"—"}</td>
-        <td class="num">${r.value?"₹"+r.value.toLocaleString():"—"}</td></tr>`).join("")}</tbody></table>
+        <td class="tiny">${esc(r.fileType||r.schemeType||"—")}</td>
+        <td class="num">${r.invest?inr(r.invest):"—"}</td>
+        <td class="num">${r.value?inr(r.value):"—"}</td>
+        <td class="num">${r.sip?inr(r.sip):"—"}</td></tr>`).join("")}</tbody></table>
     </div>
   </div>`;
   $$("#pfstage input[data-keep]").forEach(cb=>cb.onchange=()=>{
@@ -3197,8 +3464,11 @@ function renderStaged(sourceLabel){
     $("#pfstage").innerHTML="";
     runPortfolioReview(keep.map(r=>({
       name:r.name, matched:r.matched,
-      sip:r.sip??null, swp:r.swp??null, value:r.value??null,
-      invest:r.invest??null, folio:r.folio||"", schemeType:r.schemeType||"",
+      sip:r.sip??null, swp:r.swp??null, stp:r.stp??null,
+      stpFreq:r.stpFreq||"", stpTarget:r.stpTarget||"",
+      value:r.value??null, invest:r.invest??null,
+      folio:r.folio||"", schemeType:r.schemeType||r.fileType||"",
+      fileType:r.fileType||"", lots:r.lots||[],
       folios:r.folios||1,
     })));
   };
@@ -3425,6 +3695,8 @@ function boot(){
   $("#pfcsv").onclick=exportPortfolioCSV;
   $("#pfprint").onclick=printReview;
   $("#pftax") && ($("#pftax").onclick=exportAdvisorTax);
+  $("#tax-close") && ($("#tax-close").onclick=()=>$("#taxmodal").classList.add("hidden"));
+  document.addEventListener("click",e=>{ if(e.target.id==="taxmodal") $("#taxmodal").classList.add("hidden"); });
   $("#pfclient").oninput=e=>{ PF.client=e.target.value; renderPortfolio(); };
   $("#pfsample").onclick=()=>{ $("#pftext").value=
     "HDFC Flexi Cap Fund - Growth, 5000, 250000\nNippon India Large Cap Fund - Growth, 3000, 180000\nSBI Small Cap Fund - Growth, 2500"; };
