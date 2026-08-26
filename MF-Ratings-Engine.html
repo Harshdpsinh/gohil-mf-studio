@@ -246,32 +246,38 @@ details.eviden[open] summary{margin-bottom:8px}
 .warn-txt{color:var(--warn)}
 
 @media print{
-  @page{margin:14mm 14mm 20mm}
-  #printfoot{display:flex!important;position:fixed;bottom:0;left:0;right:0;
-    justify-content:space-between;gap:12px;background:#fff;
-    border-top:1px solid var(--line);padding-top:4px;
-    font-size:8.5px;color:var(--ink3)}
-  html[data-theme="dark"]{--ink:#000;--ink2:#333;--ink3:#555;
-    --bg:#fff;--card:#fff;--line:#ccc;--line2:#e5e5e5}
+  @page{size:A4;margin:12mm 12mm 16mm}
+  html[data-theme="dark"]{--ink:#111;--ink2:#333;--ink3:#555;
+    --bg:#fff;--card:#fff;--line:#ccc;--line2:#eee;--ok:#0f7b3d;--warn:#8a5a00;--bad:#b3261e}
   header.bar,nav.tabs,.icon-btn,#tribanner,#pf-input,#pfstage,#pf-actions,
-  .overlay,button,label.file,#brandcard,
-  #pfout .letterhead,
-  #view-pf>.title,#view-pf>.lede,#view-rate>.title,#view-rate>.lede,
-  #view-swp>.title,#view-swp>.lede,#view-sip>.title,#view-sip>.lede,
-  #view-swp>.card:first-of-type,#view-sip>.card:first-of-type{display:none!important}
-  #swp-out details.eviden,#swp-out details.eviden>*{display:block!important}
-  #printhead{display:block!important}
+  #swp-actions,#sip-actions,.overlay,button,label.file,#brandcard,
+  .no-print,.advisor-only,#printhead,
+  #view-home,#view-setup,
+  #view-pf>.title,#view-pf>.lede,#view-swp>.title,#view-swp>.lede,
+  #view-sip>.title,#view-sip>.lede{display:none!important}
+  #swp-out .letterhead,#sip-out .letterhead,#pfout .letterhead{display:block!important}
   details.eviden,details.eviden>*{display:block!important}
   details.eviden summary{display:none!important}
-  #view-setup details,#view-rate>details{display:none!important}
-  .grouphead{break-after:avoid;page-break-after:avoid}
-  body{background:#fff;font-size:11.5px}
-  main,main.wide{max-width:none;padding:0}
-  .card{break-inside:avoid;box-shadow:none;page-break-inside:avoid}
-  .letterhead{break-after:avoid}
-  .tbl-wrap{overflow:visible}
+  body{background:#fff!important;color:#111;font-size:11px}
+  main,main.wide{max-width:none;padding:0;margin:0}
+  .card{box-shadow:none;border-color:#ddd;break-inside:avoid;page-break-inside:avoid;margin-bottom:10px;padding:12px}
+  .letterhead{break-after:avoid;margin-bottom:10px}
+  .stats{break-inside:avoid}
+  .tbl-wrap{overflow:visible!important;max-height:none!important;border:1px solid #ddd}
+  table{font-size:10.5px}
+  th,td{padding:5px 7px}
+  tr{break-inside:avoid}
+  .disclaimer{break-inside:avoid}
   a[href]::after{content:""}
+  #printfoot{display:flex!important;position:fixed;bottom:0;left:0;right:0;
+    justify-content:space-between;gap:12px;background:#fff;
+    border-top:1px solid #ccc;padding:3px 0 0;font-size:8px;color:#666}
+  .rpt-kicker{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#555;font-weight:700;margin:0 0 4px}
+  .rpt-line{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px}
 }
+.rpt-kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:700;margin:0 0 6px}
+.rpt-line{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line2)}
+
 
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
@@ -422,16 +428,19 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
   <div class="row hidden" id="pf-actions">
     <button id="pfprint" class="primary"><i class="fa-solid fa-file-pdf"></i>Print / save as PDF</button>
     <button id="pfcsv" class="ghost"><i class="fa-solid fa-download"></i>Export review</button>
-    <span class="tiny muted">Both carry your letterhead.</span>
+    <button id="pftax" class="ghost advisor-only"><i class="fa-solid fa-file-invoice"></i>Advisor tax worksheet</button>
+    <span class="tiny muted">PDF is the client copy. Tax worksheet is for you only — it never prints.</span>
   </div>
 </section>
 
 <!-- SWP PLAN -->
 <section id="view-swp" class="hidden">
   <div class="title">Withdrawal plan</div>
-  <p class="lede">Three buckets: near-term cash that never has to be sold in a fall, a middle buffer that refills it, and a growth sleeve left alone for seven years. This projects the arithmetic — it is not a guarantee.</p>
+  <p class="lede">Fixed monthly payout from a 3-bucket corpus. The client PDF shows the amount received every month and the remaining fund value — not the working form.</p>
 
-  <div class="card">
+  <div class="card no-print">
+    <label class="field" style="margin-bottom:12px"><span>Client name (on the PDF)</span>
+      <input id="swp-client" placeholder="e.g. Mrs. A. Shah"></label>
     <div class="grid2">
       <label class="field"><span>Corpus</span><input id="swp-corpus" type="number" step="10000"></label>
       <label class="field"><span>Projection horizon (years)</span><input id="swp-horizon" type="number" min="5" max="40"></label>
@@ -460,7 +469,8 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
         <label class="field"><span>Bucket 3 — growth (%)</span><input id="swp-r3" type="number" step="0.25"></label>
         <label class="field"><span>Inflation (%)</span><input id="swp-infl" type="number" step="0.25"></label>
       </div>
-      <p class="tiny muted" style="margin-top:8px">These are assumptions, not forecasts. Change them and watch how much the answer moves — that movement is the real output.</p>
+      <p class="tiny muted" style="margin-top:8px">Defaults 6.5 / 9 / 12. Tick below to replace with 3-year rolling averages of the matching categories you have already rated.</p>
+      <label class="row" style="margin-top:8px;gap:8px"><input id="swp-hist" type="checkbox" style="width:auto"> Use 3-year rolling averages where rated</label>
     </details>
   </div>
 
@@ -468,15 +478,16 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
   <div class="row hidden" id="swp-actions">
     <button id="swp-print" class="primary"><i class="fa-solid fa-file-pdf"></i>Print / save as PDF</button>
     <button id="swp-csv" class="ghost"><i class="fa-solid fa-download"></i>Export schedule</button>
+    <button id="swp-tax" class="ghost advisor-only"><i class="fa-solid fa-file-invoice"></i>Advisor tax worksheet</button>
   </div>
 </section>
 
 <!-- SIP PLAN -->
 <section id="view-sip" class="hidden">
   <div class="title">SIP allocation</div>
-  <p class="lede">Splits a monthly instalment across your risk bands, then names the best-scoring fund in each slot from whatever categories you have run.</p>
+  <p class="lede">FPA band split. Recommended schemes are the top 5-metric scores in each slot. The client PDF is the table only.</p>
 
-  <div class="card">
+  <div class="card no-print">
     <div class="grid2">
       <label class="field"><span>Monthly SIP</span><input id="sip-amount" type="number" step="500"></label>
       <label class="field"><span>Client name (optional)</span><input id="sip-client" placeholder="e.g. Mr. R. K. Shah"></label>
@@ -964,14 +975,15 @@ function navMetrics(s,bench){
 
 /* ===================== SCORING ===================== */
 const PARAMS=[
-  {key:"cagr3y",      short:"3Y CAGR",   label:"3-Year CAGR",              dir:1,  unit:"%", src:"AMFI NAV"},
-  {key:"rolling",     short:"3Y Rolling",label:"3Y Rolling Return Avg",    dir:1,  unit:"%", src:"AMFI NAV"},
-  {key:"alpha",       short:"Alpha",     label:"Jensen's Alpha (% p.a.)",  dir:1,  unit:"%", src:"NAV + benchmark TRI"},
-  {key:"sortino",     short:"Sortino",   label:"Sortino Ratio",            dir:1,  unit:"",  src:"AMFI NAV"},
-  {key:"up_capture",  short:"Up Capt",   label:"Upside Capture Ratio",     dir:1,  unit:"%", src:"NAV + benchmark TRI"},
-  {key:"down_capture",short:"Down Capt", label:"Downside Capture Ratio",   dir:-1, unit:"%", src:"NAV + benchmark TRI"},
-  {key:"stdev",       short:"Std Dev",   label:"Annualised Std Deviation", dir:-1, unit:"%", src:"AMFI NAV"},
+  {key:"rolling",     short:"3Y Rolling",label:"3Y Rolling Return Avg",    dir:1,  unit:"%", src:"AMFI NAV", score:true},
+  {key:"alpha",       short:"Alpha",     label:"Jensen's Alpha (% p.a.)",  dir:1,  unit:"%", src:"NAV + benchmark TRI", score:true},
+  {key:"sortino",     short:"Sortino",   label:"Sortino Ratio",            dir:1,  unit:"",  src:"AMFI NAV", score:true},
+  {key:"up_capture",  short:"Up Capt",   label:"Upside Capture Ratio",     dir:1,  unit:"%", src:"NAV + benchmark TRI", score:true},
+  {key:"down_capture",short:"Down Capt", label:"Downside Capture Ratio",   dir:-1, unit:"%", src:"NAV + benchmark TRI", score:true},
+  {key:"cagr3y",      short:"3Y CAGR",   label:"3-Year CAGR (display only)", dir:1,  unit:"%", src:"AMFI NAV", score:false},
+  {key:"stdev",       short:"Std Dev",   label:"Annualised Std Deviation (display only)", dir:-1, unit:"%", src:"AMFI NAV", score:false},
 ];
+const SCORE_PARAMS=PARAMS.filter(p=>p.score);
 
 function ragPoint(f,b,c,dir){
   if(f==null||b==null||c==null) return null;
@@ -982,6 +994,7 @@ function scoreFund(m,bm,cat){
   const hasBM=!!bm;
   const per=hasBM?2:1;
   const pts=PARAMS.map(p=>{
+    if(!p.score) return null;
     const f=m[p.key], cv=cat?.[p.key];
     if(f==null||cv==null) return null;
     if(!hasBM) return (p.dir===1?f>cv:f<cv)?1:0;
@@ -1153,10 +1166,8 @@ function paintPrintHead(){
               : vis("sip") ? "SIP Allocation"
               : cat ? `${cat.cfg.name} — ${cat.plan} plan ratings`
               : "MF Ratings";
-  $("#printhead").innerHTML = letterheadHTML(title, pf ? PF.client : "")
-    || `<div class="lh-doc" style="margin-bottom:14px">${esc(title)}</div>`;
-
-  const b = BRAND, who = pf && PF.client ? " · " + PF.client : "";
+  $("#printhead").innerHTML = "";
+  const b = BRAND, who = pf && PF.client ? " · " + PF.client : vis("sip") && SIP_STATE.client ? " · " + SIP_STATE.client : vis("swp") && ($("#swp-client")||{}).value ? " · " + $("#swp-client").value : "";
   const left = b.show
     ? `${esc(b.firm)}${brandContactLine() ? " · " + esc(brandContactLine()) : ""}`
     : "MF Ratings";
@@ -1783,8 +1794,8 @@ async function runCategory(cfg,{silent=false}={}){
       benchShort = !benchProxy ? Math.round((bench.n-1)/365.25*10)/10 : null;
     }
     const catAvg=categoryAverage(rows);
-    const maxParams = bench ? PARAMS.length
-                            : PARAMS.filter(p=>p.src==="AMFI NAV").length;
+    const maxParams = bench ? SCORE_PARAMS.length
+                            : SCORE_PARAMS.filter(p=>p.src==="AMFI NAV"||p.key==="rolling"||p.key==="sortino").length;
     for(const r of rows){
       r.s=scoreFund(r.m,bmM,catAvg);
       r.complete = r.s.n===maxParams;
@@ -1884,7 +1895,7 @@ function render(){
    ["Below the line",d.rows.length-qual.length,"too new or incomplete"],
   ].map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("");
 
-  const th=PARAMS.map(p=>`<th title="${p.label} · ${p.src}">${p.short}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">${p.dir===1?"higher":"lower"}</span></th>`).join("");
+  const th=PARAMS.map(p=>`<th title="${p.label} · ${p.src}${p.score?"":" · shown, not scored"}">${p.short}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">${p.score?(p.dir===1?"higher":"lower"):"info only"}</span></th>`).join("");
   const cmp=(label,o,tag,which)=>o?`<tr class="cmp"><td>${label}</td>
       ${PARAMS.map(p=>{const c=p.key==="rolling"&&which==="bench"&&d.benchProxy;
         return `<td class="num"${c?` data-roll="__bench__" style="cursor:pointer" title="See all ${d.benchProxy.obs.toLocaleString()} windows"`:""}>${
@@ -1893,8 +1904,8 @@ function render(){
 
   $("#tablewrap").innerHTML=`
   <p class="small muted" style="margin-bottom:10px">${d.bench
-    ? `Scored against <b>${esc(d.benchName)}</b> and the category average — 2 points per parameter, max ${PARAMS.length*2}.`
-    : `<b style="color:var(--warn)">${esc(IDX_BY_KEY[d.cfg.tri].name)} not imported.</b> Alpha and capture ratios require it; scoring falls back to category average (max ${PARAMS.length}).`}
+    ? `Scored on <b>5 metrics</b> (3Y rolling, Alpha, Sortino, Up capture, Down capture) vs <b>${esc(d.benchName)}</b> and peers — 2 points each, max ${SCORE_PARAMS.length*2}. 3Y CAGR and Std Dev are shown only.`
+    : `<b style="color:var(--warn)">${esc((IDX_BY_KEY[d.cfg.tri]||{name:"Benchmark"}).name)} not imported.</b> Alpha and capture need TRI; scoring falls back to peers on available score metrics (max ${SCORE_PARAMS.length}). 3Y CAGR and Std Dev are shown only.`}
     Plan: <b>${d.plan==="direct"?"Direct":"Regular"}</b>.
     ${d.metricMode==="rolling"
       ? `Metrics are averaged across rolling 3-year windows in the last ${d.span} years. 3Y CAGR is trailing. <b>${d.nQual} of ${d.rows.length}</b> funds fully qualify.`
@@ -1919,8 +1930,8 @@ function render(){
       ${PARAMS.map((p,i)=>{const c=p.key==="rolling"&&r.proxy;
         return `<td class="num"${c?` data-roll="${r.code}" style="cursor:pointer"`:""}>
           <div>${num(r.m[p.key],p.unit)}${c?' <i class="fa-solid fa-table-list" style="font-size:9px;color:var(--acc)"></i>':""}</div>
-          <div style="margin-top:2px">${ragBadge(r.s.pts[i],r.s.per)}</div></td>`;}).join("")}
-      <td class="num" style="font-weight:650">${r.s.total??"—"}<span class="muted" style="font-weight:400">/${r.s.max||PARAMS.length*r.s.per}</span></td>
+          <div style="margin-top:2px">${p.score?ragBadge(r.s.pts[i],r.s.per):'<span class="pill">info</span>'}</div></td>`;}).join("")}
+      <td class="num" style="font-weight:650">${r.s.total??"—"}<span class="muted" style="font-weight:400">/${r.s.max||SCORE_PARAMS.length*r.s.per}</span></td>
       <td class="num muted">${r.s.n||"—"}</td>
       <td class="num" style="font-weight:650">${r.rank??"—"}</td>
       <td>${verdictBadge(r.s.pct)}</td></tr>`).join("")}
@@ -2167,7 +2178,7 @@ function analysePortfolio(results){
 }
 
 /* ===================== PORTFOLIO REVIEW CORE ===================== */
-const KEY_METRICS=["sortino","alpha","up_capture"];
+const KEY_METRICS=["rolling","alpha","sortino","up_capture"];
 const KEY_INVERSE=["down_capture"];
 const CORE_CATEGORIES=["largecap","flexicap","midcap","smallcap"];
 
@@ -2208,28 +2219,34 @@ function reviewHolding(row,cat,h){
   }
   out.keyBeat=beatBoth; out.keyScored=scored;
 
-  const sd=row.m.stdev, sdCat=cat.catAvg.stdev;
-  const bt=row.m._beta, btCat=cat.catAvg._beta;
-  const sdLower = sd!=null&&sdCat!=null ? sd<sdCat : null;
-  const btLower = bt!=null&&btCat!=null ? bt<btCat : null;
+  const sd=row.m.stdev, sdBm=cat.bmM?cat.bmM.stdev:null, sdCat=cat.catAvg.stdev;
+  const sdWorseBm = sd!=null && sdBm!=null && sd>sdBm;
+  const sdWorseCat = sd!=null && sdCat!=null && sd>sdCat;
+  const sdWorse = sdWorseBm && sdWorseCat; /* switch needs BOTH */
 
-  if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("Benchmark TRI missing for risk metrics."); return out; }
+  const failVs = (key,dir)=>{
+    const f=row.m[key], b=cat.bmM?cat.bmM[key]:null, c=cat.catAvg[key];
+    if(f==null) return false;
+    const vsB = b==null ? true : (dir===1 ? f<=b : f>=b);
+    const vsC = c==null ? true : (dir===1 ? f<=c : f>=c);
+    return vsB && vsC;
+  };
+  const rollFail = failVs("rolling",1);
+  const cagrFail = failVs("cagr3y",1);
 
-  if(beatBoth===scored){
+  if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("Score metrics missing."); return out; }
+
+  if(beatBoth===scored && !sdWorse){
     out.verdict="HEALTHY";
-    out.reasons.push(`Beats both benchmark and peers across core metrics: ${key.map(k=>PARAMS.find(x=>x.key===k).short).join(", ")}.`);
-  } else if(beatBoth>=Math.ceil(scored/2)){
-    out.verdict="HEALTHY";
-    out.reasons.push(`Clears ${beatBoth} of ${scored} core metrics. Monitor: ${failed.join(", ")}.`);
+    out.reasons.push(`Clears the 5 rating metrics (3Y rolling, Alpha, Sortino, Up / Down capture) vs benchmark and peers. Volatility is not worse than both.`);
+  } else if(sdWorse && rollFail && cagrFail){
+    out.verdict="SWITCH";
+    out.reasons.push(`Switch: Std Dev is higher than both benchmark (${sdBm!=null?sdBm.toFixed(2)+"%":"—"}) and category (${sdCat!=null?sdCat.toFixed(2)+"%":"—"}) AND 3Y rolling and 3Y CAGR both trail benchmark and peers.`);
   } else {
-    const riskWorse = (sdLower===false)||(btLower===false);
-    if(riskWorse){
-      out.verdict="SWITCH";
-      out.reasons.push(`Underperforming peers while carrying elevated volatility (Std Dev ${sd?sd.toFixed(2):"—"}% vs cat ${sdCat?sdCat.toFixed(2):"—"}%).`);
-    } else {
-      out.verdict="HOLD";
-      out.reasons.push(`Lagging on returns, but volatility is contained. Maintain SIP, halt fresh lumpsum.`);
-    }
+    out.verdict="HOLD";
+    if(!sdWorse) out.reasons.push(`Hold SIP: Std Dev is not worse than both benchmark and category. Switch is used only when vol AND 3Y rolling AND 3Y CAGR all fail.`);
+    else out.reasons.push(`Hold SIP: volatility is elevated but 3Y rolling / 3Y CAGR are not both failing vs benchmark and peers.`);
+    if(failed.length) out.reasons.push(`Watch: ${failed.join(", ")}.`);
   }
 
   if(h && h.swp){
@@ -2481,6 +2498,47 @@ function exportPortfolioCSV(){
     "portfolio-review"+(who?"-"+who.replace(/[^\w]+/g,"-").toLowerCase():"")+".csv");
 }
 
+function estimateTax(r){
+  const value=r.value||0, cost=r.invest;
+  const cls=assetClassOf(r.catName||r.schemeCategory, r.schemeType);
+  const eqW=EQUITY_WEIGHT[cls];
+  const eq=eqW==null ? null : eqW>=0.65;
+  if(!value) return {ok:false, note:"No current value on the statement."};
+  if(cost==null || !(+cost>0)) return {ok:false, eq, cls, note:"Cost/invested amount not on the statement — tax not computed."};
+  const gain=value-cost;
+  if(gain<=0) return {ok:true, eq, cls, gain, tax:0, note:"No capital gain on stated cost."};
+  if(eq){
+    const ltcg=Math.max(0, gain-125000)*0.125;
+    const stcg=gain*0.20;
+    return {ok:true, eq:true, cls, gain, ltcg, stcg,
+      note:`Equity-oriented (${cls}). If held >12 months: LTCG 12.5% above ₹1.25L exemption ≈ ${inr(ltcg)}. If sold within 12 months: STCG 20% ≈ ${inr(stcg)}.`};
+  }
+  return {ok:true, eq:false, cls, gain,
+    note:`${cls||"Non-equity"}. Entire gain ${inr(gain)} is taxed at the client's income-tax slab (no indexation).`};
+}
+
+function exportAdvisorTax(){
+  if(!PF.results.length){ setStatus("Run a review first.","warn"); return; }
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const L=[["Scheme","Verdict","Category","Current value","Cost (invested)","Gain","Asset class","Equity-oriented?","LTCG 12.5% after 1.25L (if >12m)","STCG 20% (if ≤12m)","Slab gain (debt/gold)","Note"]
+    .map(q).join(",")];
+  for(const r of PF.results){
+    const t=estimateTax(r);
+    L.push([r.matched?r.matched.name:r.name, (VERDICTS[r.verdict]||{}).label||"", r.catName||"",
+      r.value??"", r.invest??"", t.gain??"", t.cls||"", t.eq==null?"":(t.eq?"yes":"no"),
+      t.ltcg??"", t.stcg??"", t.eq===false?(t.gain??""):"", t.note||""].map(q).join(","));
+  }
+  const who=(PF.client||"").trim();
+  saveBlob(
+    `"ADVISOR ONLY — do not share with the client"\n`+
+    brandCSVHeader("Advisor tax worksheet"+(who?" — "+who:""))+
+    `"Rules","Equity LTCG 12.5% above ₹1.25 lakh (FY 2024-25+); equity STCG 20%; debt/gold at slab with no indexation. Holding period is not on most statements — both equity legs are shown."\n\n`+
+    L.join("\n"),
+    "ADVISOR-ONLY-tax"+(who?"-"+who.replace(/[^\w]+/g,"-").toLowerCase():"")+".csv"
+  );
+  setStatus("Advisor tax worksheet downloaded — it is not in the client PDF.","ok");
+}
+
 /* ===================== SWP CALCULATOR ===================== */
 const SWP_BUCKETS=[
   {id:"b1", name:"Debt reserve (Years 1–2)", years:2, holds:"Liquid / Ultra Short / Low Duration", why:"2 years of payouts without selling equity during a decline.", ret:6.5},
@@ -2513,11 +2571,13 @@ function swpProject(cfg){
     const drawing = y>=(cfg.defer||0);
     const want = drawing ? swpAnnualWithdrawal(cfg, Math.max(0,y-(cfg.defer||0))) : 0;
 
-    let taken=Math.min(b1,want);
-    b1-=taken;
-    let shortfall=want-taken;
-    if(shortfall>0){ const t=Math.min(b2,shortfall); b2-=t; taken+=t; shortfall-=t; }
-    if(shortfall>0){ const t=Math.min(b3,shortfall); b3-=t; taken+=t; shortfall-=t; }
+    let from1=Math.min(b1,want);
+    b1-=from1;
+    let shortfall=want-from1;
+    let from2=0, from3=0;
+    if(shortfall>0){ from2=Math.min(b2,shortfall); b2-=from2; shortfall-=from2; }
+    if(shortfall>0){ from3=Math.min(b3,shortfall); b3-=from3; shortfall-=from3; }
+    const taken=from1+from2+from3;
     if(shortfall>0.5 && depleted===null) depleted=y+1;
 
     const target1=want*B[0].years;
@@ -2527,7 +2587,8 @@ function swpProject(cfg){
 
     b1*=1+B[0].ret/100; b2*=1+B[1].ret/100; b3*=1+B[2].ret/100;
 
-    rows.push({year:y+1, withdraw:want, taken, b1, b2, b3,
+    rows.push({year:y+1, withdraw:want, taken, monthly: want/(cfg.freq||12),
+               from1, from2, from3, b1, b2, b3,
                total:b1+b2+b3, shortfall:Math.max(0,shortfall),
                realValue: want/Math.pow(1+(cfg.inflation||0)/100, y+1)});
     if(b1+b2+b3<=0.5){ if(depleted===null) depleted=y+1; break; }
@@ -2538,80 +2599,109 @@ function swpProject(cfg){
 
 let SWP_CFG={...SWP_DEFAULTS};
 
+function catRollingAvg(ids){
+  const xs=ids.map(id=>S.cats[id]?.catAvg?.rolling).filter(x=>x!=null&&Number.isFinite(x));
+  return xs.length? xs.reduce((a,b)=>a+b,0)/xs.length : null;
+}
+function applyHistReturns(cfg){
+  if(!cfg.useHist) return cfg;
+  const r1=catRollingAvg(["liquid","ultrashort","lowdur"]);
+  const r2=catRollingAvg(["conshybrid","equitysav","baf"]);
+  const r3=catRollingAvg(["flexicap","largemid","multicap"]);
+  if(r1!=null) cfg.r1=+r1.toFixed(2);
+  if(r2!=null) cfg.r2=+r2.toFixed(2);
+  if(r3!=null) cfg.r3=+r3.toFixed(2);
+  return cfg;
+}
+
 function renderSWP(){
-  const cfg=SWP_CFG;
+  const cfg=applyHistReturns({...SWP_CFG});
   SWP_BUCKETS[0].ret=cfg.r1; SWP_BUCKETS[1].ret=cfg.r2; SWP_BUCKETS[2].ret=cfg.r3;
   const p=swpProject(cfg);
   const per=cfg.mode==="percent" ? cfg.corpus*(cfg.percent/100)/cfg.freq : cfg.amount;
   const annual=per*cfg.freq;
   const rate=annual/cfg.corpus*100;
-  const lasts=p.depleted?`${p.depleted} years`:`beyond ${cfg.horizon} years`;
-  const safe=rate<=p.blended;
+  const lasts=p.depleted?`Year ${p.depleted}`:`${cfg.horizon}+ years`;
+  const client=($("#swp-client")&&$("#swp-client").value||"").trim();
+  const srcNote=cfg.useHist
+    ? "Bucket yields use 3-year rolling averages of rated categories (fallback 6.5 / 9 / 12)."
+    : "Bucket yields are planning assumptions (6.5% debt / 9% hybrid / 12% equity), not a guarantee.";
 
   $("#swp-actions").classList.remove("hidden");
   $("#swp-out").innerHTML=`
-  ${letterheadHTML("Withdrawal Plan", "")}
-  <div class="stats">
-    <div class="stat"><div class="k">Payout</div><div class="v">${inr(per)}</div>
-      <div class="d">${FREQ_LABEL[cfg.freq]} · ${inr(annual)}/yr</div></div>
-    <div class="stat"><div class="k">Withdrawal Rate</div><div class="v">${rate.toFixed(2)}%</div>
-      <div class="d">of initial capital</div></div>
-    <div class="stat"><div class="k">Corpus Duration</div>
-      <div class="v" style="color:var(--${p.depleted?"bad":"ok"})">${lasts}</div>
-      <div class="d">under projection model</div></div>
-    <div class="stat"><div class="k">Blended Return</div><div class="v">${p.blended.toFixed(2)}%</div>
-      <div class="d">weighted initial yield</div></div>
+  ${letterheadHTML("Withdrawal Plan", client)}
+  <p class="rpt-kicker">Client withdrawal plan</p>
+  <div class="card" style="margin-top:8px">
+    <div class="rpt-line"><span>Corpus</span><b>${inr(cfg.corpus)}</b></div>
+    <div class="rpt-line"><span>Fixed ${FREQ_LABEL[cfg.freq].toLowerCase()} payout</span><b>${inr(per)}</b></div>
+    <div class="rpt-line"><span>Annual payout</span><b>${inr(annual)}</b></div>
+    <div class="rpt-line"><span>Payout as % of corpus</span><b>${rate.toFixed(2)}%</b></div>
+    <div class="rpt-line"><span>How long the corpus lasts</span><b>${lasts}</b></div>
+    <div class="rpt-line"><span>Blended assumed return</span><b>${p.blended.toFixed(2)}% p.a.</b></div>
   </div>
-
-  <div class="note ${safe?"ok":"warn"}">
-    ${safe
-      ? `Withdrawal rate (${rate.toFixed(2)}%) is below blended yield (${p.blended.toFixed(2)}%). Sustainable long-term capital preservation.`
-      : `Withdrawal rate (${rate.toFixed(2)}%) exceeds blended yield (${p.blended.toFixed(2)}%). Capital depletion expected over time.`}
+  <div class="note ${p.depleted?"warn":"ok"}">
+    The client receives a <b>fixed ${inr(per)}</b> every ${FREQ_LABEL[cfg.freq].toLowerCase().replace("ly","")}${cfg.freq===12?"th":""}.
+    This amount does not change year to year${cfg.stepUp?` except for the ${cfg.stepUp}% annual step-up`:""}.
+    Remaining value is the projected corpus after that payout, using ${srcNote}
   </div>
 
   <div class="card" style="margin-top:14px">
-    <div class="eyebrow" style="margin-bottom:10px">Opening Bucket Allocation</div>
+    <div class="eyebrow" style="margin-bottom:10px">How the corpus is parked on day 1</div>
     ${SWP_BUCKETS.map((b,i)=>{
       const v=[p.opening.b1,p.opening.b2,p.opening.b3][i];
       return `<div class="bucketrow">
         <div class="bnum">${i+1}</div>
         <div style="flex:1;min-width:180px">
-          <div style="font-weight:600">${esc(b.name)} <span class="muted">— ${esc(b.holds)}</span></div>
-          <div class="tiny muted">${esc(b.why)}</div>
+          <div style="font-weight:600">${esc(b.name)}</div>
+          <div class="tiny muted">${esc(b.holds)} · ${esc(b.why)}</div>
         </div>
         <div style="text-align:right">
           <div style="font-weight:650">${inr(v)}</div>
-          <div class="tiny muted">${(v/cfg.corpus*100).toFixed(1)}% · ${b.ret}% return</div>
+          <div class="tiny muted">${(v/cfg.corpus*100).toFixed(1)}% · ${b.ret}% p.a.</div>
         </div>
       </div>`;}).join("")}
   </div>
 
-  <details class="eviden" style="margin-top:14px"><summary>Year-by-Year Schedule</summary>
-  <div class="tbl-wrap" style="margin-top:10px;max-height:52vh"><table><thead><tr>
-    <th>Year</th><th>Withdrawn</th><th>Worth Today</th><th>Bucket 1</th><th>Bucket 2</th><th>Bucket 3</th><th>Total</th>
+  <div class="tbl-wrap" style="margin-top:14px"><table><thead><tr>
+    <th>Year</th><th>${FREQ_LABEL[cfg.freq]} received</th><th>Annual received</th><th>Remaining corpus</th>
   </tr></thead><tbody>
     ${p.rows.map(r=>`<tr${r.shortfall>0.5?' style="color:var(--bad)"':""}>
-      <td>${r.year}</td><td class="num">${r.withdraw?inr(r.withdraw):"—"}</td>
-      <td class="num muted">${r.withdraw?inr(r.realValue):"—"}</td>
-      <td class="num">${inr(r.b1)}</td><td class="num">${inr(r.b2)}</td>
-      <td class="num">${inr(r.b3)}</td>
-      <td class="num" style="font-weight:600">${inr(r.total)}</td></tr>`).join("")}
-  </tbody></table></div></details>
+      <td>${r.year}</td>
+      <td class="num">${inr(per*(cfg.stepUp?Math.pow(1+cfg.stepUp/100,Math.max(0,r.year-1-(cfg.defer||0))):1))}</td>
+      <td class="num">${r.withdraw?inr(r.withdraw):"—"}</td>
+      <td class="num" style="font-weight:650">${inr(r.total)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="tiny muted" style="margin-top:8px">${srcNote} Past rolling returns are not a promise of future payouts.</p>
   ${disclaimerHTML()}`;
 }
 
 function swpCSV(){
-  const cfg=SWP_CFG, p=swpProject(cfg);
+  const cfg=applyHistReturns({...SWP_CFG}), p=swpProject(cfg);
+  const per=cfg.mode==="percent" ? cfg.corpus*(cfg.percent/100)/cfg.freq : cfg.amount;
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const L=[["Year","Withdrawn","Worth in today's money","Bucket 1","Bucket 2","Bucket 3","Total","Shortfall"].map(q).join(",")];
+  const L=[["Year",FREQ_LABEL[cfg.freq]+" received","Annual received","Remaining corpus"].map(q).join(",")];
   for(const r of p.rows)
-    L.push([r.year,r.withdraw.toFixed(0),r.realValue.toFixed(0),r.b1.toFixed(0),
-            r.b2.toFixed(0),r.b3.toFixed(0),r.total.toFixed(0),r.shortfall.toFixed(0)].join(","));
+    L.push([r.year, per.toFixed(0), r.withdraw.toFixed(0), r.total.toFixed(0)].join(","));
   const head=brandCSVHeader("Withdrawal plan")
-    + `"Corpus",${cfg.corpus}\n"Payout",${cfg.mode==="percent"?cfg.corpus*cfg.percent/100/cfg.freq:cfg.amount}\n`
-    + `"Frequency","${FREQ_LABEL[cfg.freq]}"\n"Step-up %",${cfg.stepUp}\n"Deferred years",${cfg.defer}\n`
+    + `"Corpus",${cfg.corpus}\n"Fixed payout",${per}\n`
+    + `"Frequency","${FREQ_LABEL[cfg.freq]}"\n"Step-up %",${cfg.stepUp}\n`
     + `"Assumed returns","B1 ${cfg.r1}% / B2 ${cfg.r2}% / B3 ${cfg.r3}%"\n"Inflation %",${cfg.inflation}\n\n`;
   saveBlob(head+L.join("\n"),"withdrawal-plan.csv");
+}
+
+function swpAdvisorTaxCSV(){
+  const cfg=applyHistReturns({...SWP_CFG}), p=swpProject(cfg);
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const L=[["Year","Withdrawn","From debt B1","From hybrid B2","From equity B3","Debt/hybrid (slab on withdrawn, 0-cost ceiling)","Equity LTCG 12.5% on B3 (0-cost ceiling, ignores ₹1.25L exemption)"]
+    .map(q).join(",")];
+  for(const r of p.rows){
+    const debt=r.from1+r.from2, eq=r.from3;
+    L.push([r.year, r.withdraw.toFixed(0), r.from1.toFixed(0), r.from2.toFixed(0), r.from3.toFixed(0),
+            debt.toFixed(0), (eq*0.125).toFixed(0)].join(","));
+  }
+  saveBlob(brandCSVHeader("ADVISOR ONLY — SWP tax worksheet")+
+    `"Note","Not for the client. 0-cost ceiling; replace with actual cost when known."\n\n`+L.join("\n"),
+    "ADVISOR-ONLY-swp-tax.csv");
 }
 
 /* ===================== SIP PLANNER ===================== */
@@ -2689,29 +2779,28 @@ function renderSIP(){
   $("#sip-actions").classList.remove("hidden");
   $("#sip-out").innerHTML=`
   ${letterheadHTML("SIP Allocation", SIP_STATE.client)}
-  <div class="stats">
-    <div class="stat"><div class="k">Monthly SIP</div><div class="v">${inr(a.amount)}</div>
-      <div class="d">${esc(a.band.label)} profile</div></div>
-    ${groups.filter(g=>gTotal(g)>0).map(g=>`<div class="stat"><div class="k">${g}</div>
-      <div class="v">${inr(gTotal(g))}</div>
-      <div class="d">${(gTotal(g)/a.amount*100).toFixed(0)}%</div></div>`).join("")}
+  <p class="rpt-kicker">Monthly SIP plan</p>
+  <div class="card" style="margin-top:8px">
+    <div class="rpt-line"><span>Client</span><b>${esc(SIP_STATE.client||"—")}</b></div>
+    <div class="rpt-line"><span>Risk band</span><b>${esc(a.band.label)}</b></div>
+    <div class="rpt-line"><span>Fixed monthly SIP</span><b>${inr(a.amount)}</b></div>
+    ${groups.filter(g=>gTotal(g)>0).map(g=>`<div class="rpt-line"><span>${g}</span><b>${inr(gTotal(g))} · ${(gTotal(g)/a.amount*100).toFixed(0)}%</b></div>`).join("")}
   </div>
-
-  <div class="tbl-wrap" style="margin-top:14px"><table><thead><tr>
-    <th>Sleeve</th><th>Asset Class</th><th>Monthly Amount</th><th>Recommended Scheme</th>
+  <p class="tiny muted" style="margin:10px 0">${esc(a.band.note)}${a.droppedGold?" Gold sleeve omitted below ₹10,000 and folded into the other sleeves.":""}
+    Recommended schemes are the top 5-metric rank in that category (rate the category first).</p>
+  <div class="tbl-wrap"><table><thead><tr>
+    <th>Sleeve</th><th>Class</th><th>Monthly SIP</th><th>Recommended scheme</th>
   </tr></thead><tbody>
     ${a.lines.map(l=>`<tr>
-      <td><div style="font-weight:550">${esc(l.slot)}</div></td>
-      <td class="tiny muted">${l.group}</td>
+      <td><b>${esc(l.slot)}</b><div class="tiny muted">${esc(l.why||"")}</div></td>
+      <td>${l.group}</td>
       <td class="num" style="font-weight:650">${inr(l.rounded)}</td>
       <td>${l.pick
-        ? `<div style="font-weight:550">${esc(l.pick.name)}</div>
-           <div class="tiny muted">Score ${l.pick.score} · Rank ${l.pick.rank}</div>`
-        : l.cat
-          ? `<span class="tiny muted">Load ${esc(l.cat)} to view top rank</span>`
-          : `<span class="tiny muted">Direct allocation</span>`}</td>
+        ? `<div style="font-weight:550">${esc(l.pick.name)}</div><div class="tiny muted">Score ${l.pick.score} · Rank ${l.pick.rank}</div>`
+        : l.cat ? `<span class="tiny muted">Rate ${esc(l.slot)} to name the top fund</span>`
+                : `<span class="tiny muted">Gold / silver ETF or FoF</span>`}</td>
     </tr>`).join("")}
-    <tr class="cmp"><td colspan="2">Total</td>
+    <tr class="cmp"><td colspan="2">Total (fixed every month)</td>
       <td class="num" style="font-weight:700">${inr(a.lines.reduce((x,l)=>x+l.rounded,0))}</td>
       <td></td></tr>
   </tbody></table></div>
@@ -3335,6 +3424,7 @@ function boot(){
   $("#pfrun").onclick=()=>runPortfolioReview($("#pftext").value);
   $("#pfcsv").onclick=exportPortfolioCSV;
   $("#pfprint").onclick=printReview;
+  $("#pftax") && ($("#pftax").onclick=exportAdvisorTax);
   $("#pfclient").oninput=e=>{ PF.client=e.target.value; renderPortfolio(); };
   $("#pfsample").onclick=()=>{ $("#pftext").value=
     "HDFC Flexi Cap Fund - Growth, 5000, 250000\nNippon India Large Cap Fund - Growth, 3000, 180000\nSBI Small Cap Fund - Growth, 2500"; };
@@ -3440,7 +3530,10 @@ function wireSWP(){
   for(const sel of Object.values(F)) $(sel).oninput=redraw;
   $("#swp-freq").onchange=redraw;
   $("#swp-csv").onclick=swpCSV;
+  $("#swp-tax") && ($("#swp-tax").onclick=swpAdvisorTaxCSV);
   $("#swp-print").onclick=()=>{ paintPrintHead(); window.print(); };
+  const cli=$("#swp-client"); if(cli) cli.oninput=renderSWP;
+  const hist=$("#swp-hist"); if(hist) hist.onchange=()=>{ SWP_CFG.useHist=hist.checked; renderSWP(); };
   paintMode(); renderSWP();
 }
 
