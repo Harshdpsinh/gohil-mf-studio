@@ -307,8 +307,13 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
   background:var(--card);cursor:pointer;font:inherit;color:inherit}
 .home-card:hover{border-color:var(--acc);transform:translateY(-1px)}
 .home-card b{display:block;font-family:Fraunces,Georgia,serif;font-size:18px;margin:10px 0 4px}
-.bnum{width:28px;height:28px;border-radius:8px;background:var(--acc-soft);color:var(--acc);
-  display:grid;place-items:center;font-weight:700;flex:none}
+.pf-hits{position:absolute;z-index:8;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;max-height:200px;overflow:auto;min-width:280px;max-width:460px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);margin-top:4px}
+.pf-hits button{display:block;width:100%;text-align:left;padding:8px 10px;font-size:12px;
+  background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;color:inherit}
+.pf-hits button:hover{background:var(--acc-soft)}
+.pf-pick{width:100%;margin-top:6px;font-size:12px;padding:6px 8px}
 
 </style>
 </head>
@@ -2221,9 +2226,9 @@ const KEY_INVERSE=["down_capture"];
 const CORE_CATEGORIES=["largecap","flexicap","midcap","smallcap"];
 
 const VERDICTS={
-  HEALTHY:{label:"Continue", cls:"good", act:"Keep SIP active. Fresh lumpsum acceptable."},
-  HOLD: {label:"Hold SIP only", cls:"warn", act:"Maintain current SIP. Pause fresh capital."},
-  SWITCH: {label:"Switch out", cls:"crit", act:"Underperforming and higher risk. Consider exit."},
+  HEALTHY:{label:"Continue", cls:"good", act:"Keep the holding. Fresh SIP / lumpsum acceptable."},
+  HOLD: {label:"Hold", cls:"warn", act:"Do not add fresh capital. Exit only if lock-in / tax allows later."},
+  SWITCH: {label:"Switch out", cls:"crit", act:"Fails the rating tests. Move to the same-category peer named below."},
   TOO_NEW:{label:"Too new", cls:"warn", act:"Under 3 years history. Risk metrics nascent."},
   NO_DATA:{label:"No data", cls:"muted", act:"Insufficient NAV history."},
 };
@@ -2274,20 +2279,26 @@ function reviewHolding(row,cat,h){
 
   if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("Score metrics missing."); return out; }
 
+  const allFiveFail = scored>=4 && beatBoth===0;
+  const sipOn = !!(h && h.sip);
+
   /* Rank 1 in its own SEBI category is never switched into another category. */
   if(row.rank===1 && row.qualified){
     out.verdict="HEALTHY";
     out.reasons.push(`Rank 1 of ${cat.cfg.name} on the 5 rating metrics. Continue — do not replace with a different category.`);
+  } else if(allFiveFail){
+    out.verdict="SWITCH";
+    out.reasons.push(`Switch: all ${scored} rating metrics fail versus benchmark and/or category (3Y rolling, Alpha, Sortino, Up / Down capture). Std Dev is not a veto once the scorecard is a clean fail.`);
   } else if(beatBoth===scored && !sdWorse){
     out.verdict="HEALTHY";
-    out.reasons.push(`Clears the 5 rating metrics (3Y rolling, Alpha, Sortino, Up / Down capture) vs benchmark and peers. Volatility is not worse than both.`);
+    out.reasons.push(`Clears the 5 rating metrics vs benchmark and peers. Volatility is not worse than both.`);
   } else if(sdWorse && rollFail && cagrFail){
     out.verdict="SWITCH";
     out.reasons.push(`Switch: Std Dev is higher than both benchmark (${sdBm!=null?sdBm.toFixed(2)+"%":"—"}) and category (${sdCat!=null?sdCat.toFixed(2)+"%":"—"}) AND 3Y rolling and 3Y CAGR both trail benchmark and peers.`);
   } else {
     out.verdict="HOLD";
-    if(!sdWorse) out.reasons.push(`Hold SIP: Std Dev is not worse than both benchmark and category. Switch is used only when vol AND 3Y rolling AND 3Y CAGR all fail.`);
-    else out.reasons.push(`Hold SIP: volatility is elevated but 3Y rolling / 3Y CAGR are not both failing vs benchmark and peers.`);
+    if(!sdWorse) out.reasons.push(`Hold${sipOn?" SIP":""}: volatility is not worse than both benchmark and category, and the 5-metric card is mixed — not a full fail.`);
+    else out.reasons.push(`Hold${sipOn?" SIP":""}: volatility is elevated but 3Y rolling / 3Y CAGR are not both failing, and the 5-metric card is not a clean fail.`);
     if(failed.length) out.reasons.push(`Watch: ${failed.join(", ")}.`);
   }
 
@@ -2296,8 +2307,13 @@ function reviewHolding(row,cat,h){
     return elss && (l.days!=null) && l.days<1095;
   });
   if(out.verdict==="SWITCH" && lockedLots.length){
-    out.verdict="HOLD";
-    out.reasons.push(`ELSS lock-in: ${lockedLots.length} lot(s) still inside 3 years — cannot switch those units yet.`);
+    const nLots=(h.lots||[]).length || lockedLots.length;
+    if(lockedLots.length>=nLots){
+      out.verdict="HOLD";
+      out.reasons.push(`ELSS lock-in: every live lot is still inside 3 years — cannot switch yet.`);
+    } else {
+      out.reasons.push(`ELSS: ${lockedLots.length} of ${nLots} lots still locked. Switch only the free lots; leave locked units.`);
+    }
   }
 
   if(h && h.swp){
@@ -2334,25 +2350,82 @@ function parsePortfolio(text){
   return out;
 }
 
-function matchScheme(name, opts={}){
+function cleanSchemeName(n){
+  return String(n||"")
+    .replace(/\(formerly[^)]*\)/ig," ")
+    .replace(/\(erstwhile[^)]*\)/ig," ")
+    .replace(/\s+-\s+-\s+/g," - ")
+    .replace(/\s+-\s*$/,"")
+    .replace(/\s{2,}/g," ")
+    .trim();
+}
+function planFlags(name){
+  const s=(name||"").toLowerCase();
+  const idcw=/idcw|dividend|payout|reinvest/.test(s.replace(/dividend\s*yield/g,""));
+  return {direct:/\bdirect\b/.test(s), idcw, growth:/\bgrowth\b/.test(s)&&!idcw};
+}
+function amcStem(name){
+  const n=(name||"").trim();
+  for(const [re,label] of AMC_ALIASES) if(re.test(n)) return label.toLowerCase().replace(/[^a-z]/g,"");
+  return (n.split(/[\s-]+/)[0]||"").toLowerCase();
+}
+function matchScore(fileName, schemeName){
+  const target=normName(fileName), k=normName(schemeName);
+  if(target.length<6 || k.length<8) return -1;
+  const amc=amcStem(fileName), gotA=amcStem(schemeName);
+  if(amc && gotA && amc!==gotA && k!==target) return -1;
+  let sc=0;
+  if(k===target) sc=100;
+  else if(k.startsWith(target)||target.startsWith(k)) sc=72;
+  else if(k.includes(target)||target.includes(k)){
+    const ratio=Math.min(k.length,target.length)/Math.max(k.length,target.length);
+    if(ratio<0.55) return -1;
+    sc=40+Math.round(ratio*20);
+  } else return -1;
+  const want=planFlags(fileName), got=planFlags(schemeName);
+  if(want.direct===got.direct) sc+=22; else sc-=28;
+  if(want.idcw===got.idcw) sc+=22; else sc-=40;
+  if(want.growth && got.growth) sc+=8;
+  if(PLAN==="direct" ? got.direct : !got.direct) sc+=6;
+  return sc;
+}
+function matchScheme(name){
   if(!UNIVERSE) return null;
-  const target=normName(name);
-  if(!target) return null;
-  const anyPlan=!!opts.anyPlan;
-  let best=null,bestLen=1e9,exact=null;
+  name=cleanSchemeName(name);
+  let best=null, bestSc=-1;
   for(const s of UNIVERSE){
     const n=s.schemeName; if(!n) continue;
-    if(!anyPlan && !isPlan(n)) continue;
-    const k=normName(n);
-    if(k===target){ exact={code:s.schemeCode,name:n,exact:true}; break; }
-    if(k.includes(target)||target.includes(k)){
-      if(n.length<bestLen){best={code:s.schemeCode,name:n,exact:false};bestLen=n.length;}
-    }
+    const sc=matchScore(name, n);
+    if(sc>bestSc){ bestSc=sc; best={code:s.schemeCode, name:n, exact:sc>=130, sc:bestSc}; }
   }
-  if(exact) return exact;
-  if(best) return best;
-  if(!anyPlan) return matchScheme(name,{anyPlan:true});
-  return null;
+  if(!best || bestSc<50) return null;
+  best.exact = bestSc>=130;
+  return best;
+}
+function searchAMFI(q, limit=12){
+  if(!UNIVERSE || !q || q.trim().length<3) return [];
+  const raw=q.trim();
+  const t=normName(raw);
+  const hits=[];
+  for(const s of UNIVERSE){
+    const n=s.schemeName; if(!n) continue;
+    const k=normName(n);
+    if(k.length<6) continue;
+    let sc=0;
+    if(n.toLowerCase().includes(raw.toLowerCase())) sc=80;
+    else if(t && (k.includes(t)||t.includes(k))) sc=55;
+    else continue;
+    sc += Math.max(0, matchScore(raw, n));
+    hits.push({code:s.schemeCode, name:n, sc});
+  }
+  hits.sort((a,b)=>b.sc-a.sc);
+  const seen=new Set(); const out=[];
+  for(const h of hits){
+    if(seen.has(h.code)) continue;
+    seen.add(h.code); out.push(h);
+    if(out.length>=limit) break;
+  }
+  return out;
 }
 
 function categoryOf(schemeCategory){
@@ -2397,7 +2470,7 @@ async function runPortfolioReview(input){
     for(let i=0;i<entries.length;i++){
       const e=entries[i];
       pfStatus(`Matching ${i+1}/${entries.length}: ${e.name}`);
-      const m=e.matched||matchScheme(e.name,{anyPlan:true});
+      const m=e.matched||matchScheme(e.name);
       if(!m){ matched.push({...e,error:"no matching AMFI scheme found"}); continue; }
       const nav=await loadNav(m.code).catch(()=>null);
       if(!nav){ matched.push({...e,matched:m,error:"could not retrieve NAV history"}); continue; }
@@ -2464,7 +2537,7 @@ function evidenceTable(ev,hasBench){
 const VERDICT_ORDER=["SWITCH","HOLD","HEALTHY","TOO_NEW","NO_DATA"];
 const GROUP_BLURB={
   SWITCH: "Underperforming while carrying elevated volatility relative to peers.",
-  HOLD: "Preserve running SIPs. Pause fresh lumpsum capital.",
+  HOLD: "Preserve the holding. Pause fresh lumpsum. Switch only on a full 5-metric fail.",
   HEALTHY:"Meeting qualitative performance benchmarks.",
   TOO_NEW:"Track record under 3 years.",
   NO_DATA:"Insufficient NAV or benchmark data.",
@@ -2543,6 +2616,7 @@ function renderPortfolio(){
     </div>
     ${g.rows.map(r=>{
     const V=VERDICTS[r.verdict]||VERDICTS.NO_DATA;
+    const vLabel = r.verdict==="HOLD" && r.sip ? "Hold SIP only" : V.label;
     const needsAction = r.verdict==="SWITCH"||r.verdict==="HOLD";
     return `<div class="card${needsAction?" act":""}">
       <div class="row spread" style="margin-bottom:8px">
@@ -2550,9 +2624,9 @@ function renderPortfolio(){
           <div style="font-weight:600">${esc(r.matched?r.matched.name:r.name)}</div>
           <div class="tiny muted">${esc(r.catName||r.schemeCategory||"Unclassified")}${r.rank?` · Rank ${r.rank}`:""}${r.invest?` · invested ${inr(r.invest)}`:""}${r.value?` · ${inr(r.value)} now`:""}${r.sip?` · SIP ${inr(r.sip)}/mth`:""}${r.stp?` · STP ${inr(r.stp)}`:""}${r.folios>1?` · ${r.folios} folios`:""}</div>
         </div>
-        <span class="verdict ${VCLS[V.cls]}">${V.label}</span>
+        <span class="verdict ${VCLS[V.cls]}">${vLabel}</span>
       </div>
-      <div class="small" style="font-weight:550;margin-bottom:6px">${esc(V.act)}</div>
+      <div class="small" style="font-weight:550;margin-bottom:6px">${esc(r.verdict==="HOLD" && r.sip ? "Maintain current SIP. Pause fresh capital." : V.act)}</div>
       ${(r.reasons||[]).map(x=>`<div class="tiny muted" style="margin-bottom:4px">• ${x}</div>`).join("")}
       ${r.evidence?`<details class="eviden"${needsAction?" open":""}>
         <summary>Metric Evidence</summary>
@@ -3102,10 +3176,14 @@ async function readPDF(file,password){
 const NAMEY=/\b(fund|scheme|plan|yojana)\b/i;
 const NOISE=/^(total|grand total|opening|closing|folio|pan|nominee|advisor|arn|statement|summary|page \d|date|transaction|nav |units|amount|market value|cost value|sub ?total)/i;
 
+function holdingKey(h){
+  const f=planFlags(h.name);
+  return normName(h.name).slice(0,40)+"|"+(f.direct?"d":"r")+"|"+(f.idcw?"i":"g");
+}
 function dedupeHoldings(list){
   const by=new Map();
   for(const h of list){
-    const k=normName(h.name).slice(0,40);
+    const k=holdingKey(h);
     const prev=by.get(k);
     if(!prev){ by.set(k,{...h, folios:h.folios||1, lots:h.lots?h.lots.slice():[]}); continue; }
     by.set(k,{
@@ -3425,7 +3503,7 @@ async function stageHoldings(list,sourceLabel){
     $("#pfclient").value=list.client; PF.client=list.client;
   }
   STAGED.rows=list.map(h=>{
-    const m=matchScheme(h.name,{anyPlan:true});
+    const m=matchScheme(h.name);
     return {...h, matched:m, keep:!!m,
             confidence: !m?"none" : m.exact?"exact"
               : (normName(m.name)===normName(h.name)?"exact":"fuzzy")};
@@ -3452,13 +3530,18 @@ function renderStaged(sourceLabel){
         <button id="pfstagerun" class="primary"><i class="fa-solid fa-check"></i>Run Review</button>
       </div>
     </div>
-    <div class="tbl-wrap" style="max-height:340px">
+    <p class="tiny muted" style="margin:0 0 10px">Tick every scheme to include. Yellow <b>check</b> or red <b>no match</b> — type the right AMFI name in the box under the match and pick it. Direct vs Regular and Growth vs IDCW must match the statement.</p>
+    <div class="tbl-wrap" style="max-height:420px;overflow:auto">
       <table><thead><tr><th style="width:26px"></th><th>Scheme in File</th>
-        <th style="text-align:left">Matched AMFI Scheme</th><th>Type</th><th>Invested</th><th>Current</th><th>SIP</th></tr></thead>
-      <tbody>${R.map((r,i)=>`<tr${r.keep?"":' style="opacity:.45"'}>
-        <td><input type="checkbox" data-keep="${i}" ${r.keep?"checked":""} ${r.matched?"":"disabled"} style="width:auto"></td>
+        <th style="text-align:left">Matched AMFI Scheme (editable)</th><th>Type</th><th>Invested</th><th>Current</th><th>SIP</th></tr></thead>
+      <tbody>${R.map((r,i)=>`<tr${r.keep?"":' style="opacity:.7"'}>
+        <td><input type="checkbox" data-keep="${i}" ${r.keep?"checked":""} style="width:auto"></td>
         <td>${esc(r.name)}${r.folios>1?` <span class="pill">${r.folios} folios</span>`:""}${r.stp?` <span class="pill">STP</span>`:""}</td>
-        <td style="text-align:left">${r.matched?esc(r.matched.name):'<span class="muted">not found</span>'} ${badge(r.confidence)}</td>
+        <td style="text-align:left;position:relative;min-width:280px">
+          <div>${r.matched?esc(r.matched.name):'<span class="muted">not found — type below</span>'} ${badge(r.confidence)}</div>
+          <input type="search" class="pf-pick" data-i="${i}" placeholder="Type to pick / correct AMFI scheme" autocomplete="off">
+          <div class="pf-hits hidden" data-hits="${i}"></div>
+        </td>
         <td class="tiny">${esc(r.fileType||r.schemeType||"—")}</td>
         <td class="num">${r.invest?inr(r.invest):"—"}</td>
         <td class="num">${r.value?inr(r.value):"—"}</td>
@@ -3466,9 +3549,35 @@ function renderStaged(sourceLabel){
     </div>
   </div>`;
   $$("#pfstage input[data-keep]").forEach(cb=>cb.onchange=()=>{
-    STAGED.rows[+cb.dataset.keep].keep=cb.checked; renderStaged(sourceLabel);});
+    STAGED.rows[+cb.dataset.keep].keep=cb.checked;
+    const tr=cb.closest("tr"); if(tr) tr.style.opacity=cb.checked?"":"0.7";
+  });
+  $$("#pfstage .pf-pick").forEach(inp=>{
+    let timer=null;
+    inp.oninput=()=>{
+      clearTimeout(timer);
+      timer=setTimeout(()=>{
+        const i=+inp.dataset.i;
+        const box=inp.parentElement.querySelector(".pf-hits");
+        if(!box) return;
+        const hits=searchAMFI(inp.value, 12);
+        if(!hits.length){ box.classList.add("hidden"); box.innerHTML="<div class='tiny muted' style='padding:8px'>No AMFI scheme matches that text</div>"; box.classList.remove("hidden"); return; }
+        box.classList.remove("hidden");
+        box.innerHTML=hits.map(h=>`<button type="button" data-code="${esc(String(h.code))}">${esc(h.name)}</button>`).join("");
+        box.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+          STAGED.rows[i].matched={code:b.dataset.code, name:b.textContent, exact:true, picked:true};
+          STAGED.rows[i].keep=true;
+          STAGED.rows[i].confidence="exact";
+          renderStaged(sourceLabel);
+        });
+      }, 160);
+    };
+    inp.onkeydown=ev=>{ if(ev.key==="Escape"){ const box=inp.parentElement.querySelector(".pf-hits"); if(box) box.classList.add("hidden"); } };
+  });
   $("#pfstagerun").onclick=()=>{
     const keep=STAGED.rows.filter(r=>r.keep);
+    const unmatched=keep.filter(r=>!r.matched);
+    if(unmatched.length){ pfStatus(`${unmatched.length} ticked scheme(s) have no AMFI match — type the name in the search box and pick one.`,"err"); return; }
     if(!keep.length){ pfStatus("No schemes selected.","err"); return; }
     PF.meta=Object.fromEntries(keep.map(r=>[normName(r.matched.name),{schemeType:r.schemeType||"",asRead:r.name}]));
     $("#pftext").value=keep.map(r=>[r.matched.name, r.sip??"", r.value??""].join(", ")).join("\n");
