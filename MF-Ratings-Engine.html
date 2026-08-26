@@ -396,7 +396,7 @@ body{font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-
 <!-- PORTFOLIO -->
 <section id="view-pf" class="hidden">
   <div class="title">Review a client portfolio</div>
-  <p class="lede">Upload the MFD Excel (transaction book), CAS PDF or paste. Every live scheme is reviewed — lumpsum, SIP, STP — not SIP-only. Rank 1 in its category stays Continue. Tax is advisor-only.</p>
+  <p class="lede">Every live scheme is reviewed. Top-5 rankers stay Continue. If SIP is not in a ranker, redirect SIP only — keep existing units. Complete switch only when 3Y CAGR is below both benchmark and category AND Std Dev is above both.</p>
 
   <div id="pf-input" class="card">
     <div class="choices two" style="margin-bottom:14px">
@@ -2224,14 +2224,28 @@ function analysePortfolio(results){
 const KEY_METRICS=["rolling","alpha","sortino","up_capture"];
 const KEY_INVERSE=["down_capture"];
 const CORE_CATEGORIES=["largecap","flexicap","midcap","smallcap"];
+const RANKER_N=5;
 
 const VERDICTS={
-  HEALTHY:{label:"Continue", cls:"good", act:"Keep the holding. Fresh SIP / lumpsum acceptable."},
-  HOLD: {label:"Hold", cls:"warn", act:"Do not add fresh capital. Exit only if lock-in / tax allows later."},
-  SWITCH: {label:"Switch out", cls:"crit", act:"Fails the rating tests. Move to the same-category peer named below."},
+  HEALTHY:{label:"Continue", cls:"good", act:"This is a ranker fund. Keep corpus and SIP. Fresh lumpsum acceptable."},
+  HOLD: {label:"Hold corpus", cls:"warn", act:"Keep units already bought. Do not add fresh lumpsum. No SIP to redirect."},
+  SWITCH_SIP:{label:"Switch SIP only", cls:"warn", act:"Keep the amount already invested. Redirect only the SIP to the ranker fund below."},
+  SWITCH: {label:"Complete switch", cls:"crit", act:"Exit corpus and SIP. 3Y CAGR trails both benchmark and category, and Std Dev is higher than both. Move to the ranker fund below."},
   TOO_NEW:{label:"Too new", cls:"warn", act:"Under 3 years history. Risk metrics nascent."},
   NO_DATA:{label:"No data", cls:"muted", act:"Insufficient NAV history."},
 };
+
+function isRankerFund(row){
+  return !!(row && row.qualified && row.rank && row.rank<=RANKER_N);
+}
+
+function worseThanBoth(fund, bench, cat, wantHigher){
+  if(fund==null) return false;
+  if(bench==null && cat==null) return false;
+  const vsB = bench==null ? true : (wantHigher ? fund<bench : fund>bench);
+  const vsC = cat==null ? true : (wantHigher ? fund<cat : fund>cat);
+  return vsB && vsC;
+}
 
 function pointFor(row,key){
   const i=PARAMS.findIndex(p=>p.key===key);
@@ -2239,7 +2253,7 @@ function pointFor(row,key){
 }
 
 function reviewHolding(row,cat,h){
-  const out={row,cat,reasons:[],evidence:[]};
+  const out={row,cat,reasons:[],evidence:[],ranker:isRankerFund(row)};
   const ageY=row.ageYears;
 
   if(ageY!=null&&ageY<3){
@@ -2263,44 +2277,32 @@ function reviewHolding(row,cat,h){
   out.keyBeat=beatBoth; out.keyScored=scored;
 
   const sd=row.m.stdev, sdBm=cat.bmM?cat.bmM.stdev:null, sdCat=cat.catAvg.stdev;
-  const sdWorseBm = sd!=null && sdBm!=null && sd>sdBm;
-  const sdWorseCat = sd!=null && sdCat!=null && sd>sdCat;
-  const sdWorse = sdWorseBm && sdWorseCat; /* switch needs BOTH */
-
-  const failVs = (key,dir)=>{
-    const f=row.m[key], b=cat.bmM?cat.bmM[key]:null, c=cat.catAvg[key];
-    if(f==null) return false;
-    const vsB = b==null ? true : (dir===1 ? f<=b : f>=b);
-    const vsC = c==null ? true : (dir===1 ? f<=c : f>=c);
-    return vsB && vsC;
-  };
-  const rollFail = failVs("rolling",1);
-  const cagrFail = failVs("cagr3y",1);
+  const cagr=row.m.cagr3y, cagrBm=cat.bmM?cat.bmM.cagr3y:null, cagrCat=cat.catAvg.cagr3y;
+  const cagrFailBoth = worseThanBoth(cagr, cagrBm, cagrCat, true);
+  const sdWorseBoth = worseThanBoth(sd, sdBm, sdCat, false);
+  const sipOn = !!(h && h.sip);
 
   if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("Score metrics missing."); return out; }
 
-  const allFiveFail = scored>=4 && beatBoth===0;
-  const sipOn = !!(h && h.sip);
+  const fmt=v=>v==null?"—":v.toFixed(2)+"%";
 
-  /* Rank 1 in its own SEBI category is never switched into another category. */
-  if(row.rank===1 && row.qualified){
+  if(isRankerFund(row)){
     out.verdict="HEALTHY";
-    out.reasons.push(`Rank 1 of ${cat.cfg.name} on the 5 rating metrics. Continue — do not replace with a different category.`);
-  } else if(allFiveFail){
+    out.reasons.push(`Ranker fund — rank ${row.rank} of ${cat.cfg.name} (top ${RANKER_N} on the 5 rating metrics). Keep corpus and SIP. Do not move this into another category.`);
+  } else if(cagrFailBoth && sdWorseBoth){
     out.verdict="SWITCH";
-    out.reasons.push(`Switch: all ${scored} rating metrics fail versus benchmark and/or category (3Y rolling, Alpha, Sortino, Up / Down capture). Std Dev is not a veto once the scorecard is a clean fail.`);
-  } else if(beatBoth===scored && !sdWorse){
-    out.verdict="HEALTHY";
-    out.reasons.push(`Clears the 5 rating metrics vs benchmark and peers. Volatility is not worse than both.`);
-  } else if(sdWorse && rollFail && cagrFail){
-    out.verdict="SWITCH";
-    out.reasons.push(`Switch: Std Dev is higher than both benchmark (${sdBm!=null?sdBm.toFixed(2)+"%":"—"}) and category (${sdCat!=null?sdCat.toFixed(2)+"%":"—"}) AND 3Y rolling and 3Y CAGR both trail benchmark and peers.`);
+    out.reasons.push(`Complete switch: not in the top ${RANKER_N} ranker list, 3Y CAGR ${fmt(cagr)} is below benchmark ${fmt(cagrBm)} and category ${fmt(cagrCat)}, and Std Dev ${fmt(sd)} is above benchmark ${fmt(sdBm)} and category ${fmt(sdCat)}. Move corpus and SIP to a ranker fund in the same category.`);
+  } else if(sipOn){
+    out.verdict="SWITCH_SIP";
+    out.reasons.push(`Switch SIP only: this fund is outside the top ${RANKER_N} rankers. Keep the amount already invested. Redirect the SIP of ${inr(h.sip)}/month to a ranker fund in ${cat.cfg.name}.`);
+    if(!cagrFailBoth) out.reasons.push(`3Y CAGR ${fmt(cagr)} is not below both benchmark and category — that is why corpus stays.`);
+    if(!sdWorseBoth) out.reasons.push(`Std Dev ${fmt(sd)} is not higher than both benchmark and category — that is why corpus stays.`);
   } else {
     out.verdict="HOLD";
-    if(!sdWorse) out.reasons.push(`Hold${sipOn?" SIP":""}: volatility is not worse than both benchmark and category, and the 5-metric card is mixed — not a full fail.`);
-    else out.reasons.push(`Hold${sipOn?" SIP":""}: volatility is elevated but 3Y rolling / 3Y CAGR are not both failing, and the 5-metric card is not a clean fail.`);
-    if(failed.length) out.reasons.push(`Watch: ${failed.join(", ")}.`);
+    out.reasons.push(`Hold corpus: not a ranker, no running SIP, and it does not fail both 3Y CAGR and Std Dev versus benchmark and category. Do not add fresh lumpsum.`);
   }
+
+  if(failed.length && out.verdict!=="HEALTHY") out.reasons.push(`Watch: ${failed.join(", ")}.`);
 
   const lockedLots=(h&&h.lots||[]).filter(l=>{
     const elss=/elss|tax.?sav/i.test((h.fileType||"")+" "+(h.catName||"")+" "+(cat.cfg&&cat.cfg.id||""));
@@ -2309,17 +2311,17 @@ function reviewHolding(row,cat,h){
   if(out.verdict==="SWITCH" && lockedLots.length){
     const nLots=(h.lots||[]).length || lockedLots.length;
     if(lockedLots.length>=nLots){
-      out.verdict="HOLD";
-      out.reasons.push(`ELSS lock-in: every live lot is still inside 3 years — cannot switch yet.`);
+      out.verdict = sipOn ? "SWITCH_SIP" : "HOLD";
+      out.reasons.push(`ELSS lock-in: every live lot is still inside 3 years — cannot switch corpus. ${sipOn?"Redirect the SIP only.":"Hold units."}`);
     } else {
-      out.reasons.push(`ELSS: ${lockedLots.length} of ${nLots} lots still locked. Switch only the free lots; leave locked units.`);
+      out.reasons.push(`ELSS: ${lockedLots.length} of ${nLots} lots still locked. Complete switch applies to free lots only; leave locked units.`);
     }
   }
 
   if(h && h.swp){
     out.reasons.push(`Active SWP of ₹${h.swp.toLocaleString("en-IN")}/mth is connected to this holding.`);
   }
-  if(h && h.sip){
+  if(h && h.sip && out.verdict!=="SWITCH_SIP"){
     out.reasons.push(`Running SIP ${inr(h.sip)}/month.`);
   }
   if(h && h.stp){
@@ -2329,12 +2331,14 @@ function reviewHolding(row,cat,h){
 }
 
 function suggestSwitch(cat,heldCodes,heldRow){
-  const pool=cat.rows.filter(r=>r.qualified&&r.s.pct!=null&&!heldCodes.has(r.code)&&(r.ageYears==null||r.ageYears>=3));
-  if(!pool.length) return null;
-  const best=pool.slice().sort((a,b)=>b.s.pct-a.s.pct)[0];
-  if(heldRow && heldRow.rank===1) return null;
-  if(heldRow && best.s.pct<=(heldRow.s.pct||0)) return null;
-  return best.s.pct>0.5?best:null;
+  if(heldRow && isRankerFund(heldRow) && heldRow.rank===1) return null;
+  const pool=(cat.rows||[]).filter(r=>isRankerFund(r)&&!heldCodes.has(r.code));
+  if(!pool.length){
+    const any=(cat.rows||[]).filter(r=>r.qualified&&r.s.pct!=null&&!heldCodes.has(r.code)&&(r.ageYears==null||r.ageYears>=3));
+    if(!any.length) return null;
+    return any.slice().sort((a,b)=>a.rank-b.rank)[0];
+  }
+  return pool.slice().sort((a,b)=>a.rank-b.rank)[0];
 }
 
 function parsePortfolio(text){
@@ -2502,7 +2506,8 @@ async function runPortfolioReview(input){
       if(!row){ results.push({...m,verdict:"NO_DATA",
         reasons:[`Scheme not in the scored ${cat?cat.cfg.name:"category"} list (raise the fund cap in Setup if it was truncated).`]}); continue; }
       const rev=reviewHolding(row,cat,m);
-      rev.switchTo = rev.verdict==="SWITCH" ? suggestSwitch(cat,heldByCat[m.catId],row) : null;
+      rev.switchTo = (rev.verdict==="SWITCH"||rev.verdict==="SWITCH_SIP")
+        ? suggestSwitch(cat,heldByCat[m.catId],row) : null;
       results.push({...m, ...rev, catName:cat.cfg.name, rank:row.rank});
     }
     PF.holdings=matched; PF.results=results;
@@ -2534,11 +2539,12 @@ function evidenceTable(ev,hasBench){
   </tbody></table></div>`;
 }
 
-const VERDICT_ORDER=["SWITCH","HOLD","HEALTHY","TOO_NEW","NO_DATA"];
+const VERDICT_ORDER=["SWITCH","SWITCH_SIP","HOLD","HEALTHY","TOO_NEW","NO_DATA"];
 const GROUP_BLURB={
-  SWITCH: "Underperforming while carrying elevated volatility relative to peers.",
-  HOLD: "Preserve the holding. Pause fresh lumpsum. Switch only on a full 5-metric fail.",
-  HEALTHY:"Meeting qualitative performance benchmarks.",
+  SWITCH: "Not a ranker, 3Y CAGR below both, Std Dev above both — exit corpus and SIP.",
+  SWITCH_SIP: "SIP is not in a top-5 ranker. Keep existing units; redirect only the SIP.",
+  HOLD: "Keep corpus. No SIP to move. Do not add fresh lumpsum.",
+  HEALTHY:"Top-5 ranker in its own SEBI category. Continue corpus and SIP.",
   TOO_NEW:"Track record under 3 years.",
   NO_DATA:"Insufficient NAV or benchmark data.",
 };
@@ -2602,8 +2608,8 @@ function renderPortfolio(){
   <div class="stats" style="margin-top:18px">
     ${[["Portfolio Value",totVal?inr(totVal):"—",`${R.length} schemes`],
        ["Amount invested",sum("invest")?inr(sum("invest")):"—","from statement lots"],
-       ["Monthly SIP",totSip?inr(totSip):"—","Running SIPs only"],
-       ["Switch candidates",count("SWITCH"),"same-category peer only"]]
+       ["Switch SIP only",count("SWITCH_SIP"),"keep corpus"],
+       ["Complete switch",count("SWITCH"),"corpus + SIP"]]
       .map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("")}
   </div>
   ${coverageNote()}
@@ -2616,29 +2622,29 @@ function renderPortfolio(){
     </div>
     ${g.rows.map(r=>{
     const V=VERDICTS[r.verdict]||VERDICTS.NO_DATA;
-    const vLabel = r.verdict==="HOLD" && r.sip ? "Hold SIP only" : V.label;
-    const needsAction = r.verdict==="SWITCH"||r.verdict==="HOLD";
+    const needsAction = r.verdict==="SWITCH"||r.verdict==="SWITCH_SIP"||r.verdict==="HOLD";
+    const sipAmt = r.sip?inr(r.sip)+"/mth":"";
     return `<div class="card${needsAction?" act":""}">
       <div class="row spread" style="margin-bottom:8px">
         <div style="flex:1;min-width:220px">
           <div style="font-weight:600">${esc(r.matched?r.matched.name:r.name)}</div>
-          <div class="tiny muted">${esc(r.catName||r.schemeCategory||"Unclassified")}${r.rank?` · Rank ${r.rank}`:""}${r.invest?` · invested ${inr(r.invest)}`:""}${r.value?` · ${inr(r.value)} now`:""}${r.sip?` · SIP ${inr(r.sip)}/mth`:""}${r.stp?` · STP ${inr(r.stp)}`:""}${r.folios>1?` · ${r.folios} folios`:""}</div>
+          <div class="tiny muted">${esc(r.catName||r.schemeCategory||"Unclassified")}${r.rank?` · Rank ${r.rank}${r.ranker?" ranker":""}`:""}${r.invest?` · invested ${inr(r.invest)}`:""}${r.value?` · ${inr(r.value)} now`:""}${r.sip?` · SIP ${inr(r.sip)}/mth`:""}${r.stp?` · STP ${inr(r.stp)}`:""}${r.folios>1?` · ${r.folios} folios`:""}</div>
         </div>
-        <span class="verdict ${VCLS[V.cls]}">${vLabel}</span>
+        <span class="verdict ${VCLS[V.cls]}">${V.label}</span>
       </div>
-      <div class="small" style="font-weight:550;margin-bottom:6px">${esc(r.verdict==="HOLD" && r.sip ? "Maintain current SIP. Pause fresh capital." : V.act)}</div>
+      <div class="small" style="font-weight:550;margin-bottom:6px">${esc(V.act)}</div>
       ${(r.reasons||[]).map(x=>`<div class="tiny muted" style="margin-bottom:4px">• ${x}</div>`).join("")}
       ${r.evidence?`<details class="eviden"${needsAction?" open":""}>
         <summary>Metric Evidence</summary>
         ${evidenceTable(r.evidence,!!(S.cats[r.catId]&&S.cats[r.catId].bmM))}
       </details>`:""}
       ${r.switchTo?`<div class="note info" style="margin-top:12px">
-        <div class="eyebrow" style="color:var(--acc);margin-bottom:4px">Same-category alternative (not a different asset class)</div>
+        <div class="eyebrow" style="color:var(--acc);margin-bottom:4px">${r.verdict==="SWITCH_SIP"?"Redirect SIP to this ranker (keep existing units)":"Complete switch into this ranker"} · same category</div>
         <div style="font-weight:600">${esc(r.switchTo.name)}</div>
-        <div class="tiny muted" style="margin-top:4px">Score ${r.switchTo.s.total}/${r.switchTo.s.max} · Rank ${r.switchTo.rank} in ${esc(r.catName||"category")}</div>
+        <div class="tiny muted" style="margin-top:4px">Rank ${r.switchTo.rank} of ${esc(r.catName||"category")} · Score ${r.switchTo.s.total}/${r.switchTo.s.max}${r.verdict==="SWITCH_SIP"&&r.sip?` · move SIP ${inr(r.sip)}/mth only`:""}</div>
       </div>`:""}
       ${r.verdict==="SWITCH"?`<div class="row no-print advisor-only" style="margin-top:10px">
-        <button class="ghost tax-btn" data-tax="${PF.results.indexOf(r)}"><i class="fa-solid fa-file-invoice"></i>Advisor: tax if switched</button>
+        <button class="ghost tax-btn" data-tax="${PF.results.indexOf(r)}"><i class="fa-solid fa-file-invoice"></i>Advisor: tax if corpus is switched</button>
       </div>`:""}
     </div>`;}).join("")}`;}).join("")}
   ${disclaimerHTML()}`;
