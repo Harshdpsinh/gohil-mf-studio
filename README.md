@@ -32,20 +32,6 @@ Never use an index-fund NAV as the hurdle (TER inflates alpha).
   r_arb  = (1.058)^(1/250) − 1
   r_tot  = w_eq * r_eq + w_debt * r_debt + w_arb * r_arb
 
-Key      Name                         Equity  Debt   Arb    Categories
-nifty100 NIFTY 100 TRI                live NSE
-n500     NIFTY 500 TRI                live NSE
-mid150   Midcap 150                   live NSE
-small250 Smallcap 250                 live NSE
-lm250    LargeMidcap 250              live NSE
-mc502525 Multicap 50:25:25            live NSE
-hyb6535  Hybrid Composite 65:35       65%     35%    0      Aggressive Hybrid, Multi Asset
-hyb5050  Hybrid Composite 50:50       50%     50%    0      Balanced Advantage
-hyb1585  Hybrid Composite 15:85       15%     85%    0      Conservative Hybrid
-eqsav    Equity Savings TRI           35%     35%    30%    Equity Savings
-arb      NIFTY 50 Arbitrage TRI       0       0      100%   Arbitrage
-debt7    AAA/G-Sec 7% TR sleeve       0       100%   0      Reference debt curve (peer-only ranking)
+## Figma skill
 
-Pure debt funds (Liquid, Ultra Short, Short Duration, Corporate Bond, Gilt)
-score peer-only. debt7 is the 7% sleeve inside hybrids, not a rank hurdle
-(a smooth 7% series would zero every fund on volatility).
+Official `figma-use` skill is in [skills/figma-use/SKILL.md](skills/figma-use/SKILL.md). The ratings engine HTML is unchanged. See [FIGMA.md](FIGMA.md).
