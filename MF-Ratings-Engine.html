@@ -13,6 +13,7 @@
      its own if this CDN is blocked. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Source+Sans+3:wght@400;600;700&display=swap">
 <style>
 /* Local base styles, following Pico.css's approach (semantic HTML, class-light,
    generous whitespace, one accent, dark mode by default). Pico loads from CDN
@@ -44,7 +45,9 @@ html[data-theme="dark"]{
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  -webkit-font-smoothing:antialiased;font-size:15px}
+  -webkit-font-smoothing:antialiased;font-size:15px;
+  font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3,.title,.studio-name,.font-display{font-family:Fraunces,Georgia,serif}
 h1,h2,h3,p{margin:0}
 main{max-width:900px;margin:0 auto;padding:0 20px 96px}
 .wide{max-width:1400px}
@@ -58,7 +61,20 @@ header.bar::before{content:"";display:block;height:3px;
 .wide .bar-in,body.wide-mode .bar-in{max-width:1400px}
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
 .brand-div{width:1px;height:22px;background:var(--line);flex:none}
-.brand-app{font-weight:650;letter-spacing:-.01em;font-size:14.5px;white-space:nowrap}
+.studio-mark{width:36px;height:36px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--brand-1),var(--brand-2));
+  color:#fff;display:grid;place-items:center;font:700 18px Fraunces,Georgia,serif}
+.studio-name{font-weight:650;letter-spacing:-.02em;font-size:15px;line-height:1.15}
+.studio-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+#tabs{display:grid;gap:22px}
+@media(min-width:900px){#tabs{grid-template-columns:repeat(3,1fr)}}
+.home-grid{display:grid;gap:12px;margin-top:22px}
+@media(min-width:700px){.home-grid{grid-template-columns:1fr 1fr}}
+.home-card{text-align:left;padding:20px;border-radius:16px;border:1px solid var(--line);
+  background:var(--card);cursor:pointer}
+.home-card:hover{border-color:var(--acc);transform:translateY(-1px)}
+.home-card b{display:block;font-family:Fraunces,Georgia,serif;font-size:18px;margin:10px 0 4px}
+.plan-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin:12px 0}
 
 /* --- brand mark ---
    The logo is a vector trace of the supplied artwork, inlined as <symbol>.
@@ -281,20 +297,19 @@ article,section{margin:0}
 
 <header class="bar">
   <div class="bar-in">
-    <div class="brand">
-      <span class="gi-lockup" style="--h:26px" role="img" aria-label="Gohil Insurance &amp; Investments">
-        <svg viewBox="0 0 875 1157" class="gi-l-mark"><use href="#gi-mark"/></svg>
-        <span class="gi-l-txt">
-          <svg viewBox="0 0 2347 438" class="gi-l-word"><use href="#gi-word"/></svg>
-          <svg viewBox="0 0 1848 138" class="gi-l-ins"><use href="#gi-ins"/></svg>
-        </span>
-      </span>
-      <span class="brand-div"></span>
-      <span class="brand-app">MF Ratings</span>
+        <div class="brand">
+      <span class="studio-mark" aria-hidden="true">G</span>
+      <div>
+        <div class="studio-name">Gohil MF Studio</div>
+        <div class="studio-sub">Ratings · SWP · SIP · no login</div>
+      </div>
     </div>
     <nav class="tabs">
-      <button data-view="rate"  aria-current="true">Rate funds</button>
+      <button data-view="home" aria-current="true">Home</button>
+      <button data-view="rate">Rate</button>
       <button data-view="pf">Portfolio</button>
+      <button data-view="swp">SWP</button>
+      <button data-view="sip">SIP</button>
       <button data-view="setup">Setup</button>
     </nav>
     <button id="theme" class="icon-btn" title="Light / dark"><i class="fa-solid fa-moon"></i></button>
@@ -307,8 +322,20 @@ article,section{margin:0}
 <div id="printhead"></div>
 <div id="printfoot"></div>
 
+<section id="view-home">
+  <p class="eyebrow">Gohil Insurance · local studio</p>
+  <div class="title" style="font-size:32px;letter-spacing:-.03em">Rate funds. Review books. Plan cash flow.</div>
+  <p class="lede">Seven-parameter scoring against Nifty TRI plus category peers. Time-horizon SWP buckets and FPA SIP splits. Runs in this file — AMFI NAVs live, TRI from the published pack (no NSE login).</p>
+  <div class="home-grid">
+    <button class="home-card" data-go="rate"><i class="fa-solid fa-chart-line" style="color:var(--acc)"></i><b>Rate a category</b><span class="small muted">AMFI NAVs vs TRI + peers. RAG on CAGR, rolling, alpha, Sortino, capture, vol.</span></button>
+    <button class="home-card" data-go="pf"><i class="fa-solid fa-wallet" style="color:var(--acc)"></i><b>Portfolio x-ray</b><span class="small muted">Paste holdings. Match AMFI names, equity mix, house concentration.</span></button>
+    <button class="home-card" data-go="swp"><i class="fa-solid fa-calendar" style="color:var(--acc)"></i><b>3-bucket SWP</b><span class="small muted">Debt reserve 1–2y, hybrid buffer 3–5y, equity engine 6+.</span></button>
+    <button class="home-card" data-go="sip"><i class="fa-solid fa-piggy-bank" style="color:var(--acc)"></i><b>SIP planner</b><span class="small muted">Conservative / moderate / aggressive. ₹100 rounding, gold floor ₹10,000.</span></button>
+  </div>
+</section>
+
 <!-- ══════════════ RATE ══════════════ -->
-<section id="view-rate">
+<section id="view-rate" class="hidden">
   <div id="rate-pick">
     <div class="title">Which category?</div>
     <p class="lede">Pick one. Every fund in it is pulled from AMFI, scored on seven parameters against its benchmark and its peers, and ranked.</p>
@@ -383,6 +410,31 @@ article,section{margin:0}
 </section>
 
 <!-- ══════════════ SETUP ══════════════ -->
+
+<section id="view-swp" class="hidden">
+  <div class="title">3-bucket SWP</div>
+  <p class="lede">Debt reserve years 1–2 at 6.5%, hybrid buffer years 3–5 at 9%, equity engine 6+ at 12%. Sequence-of-returns risk is taken by the reserve, not the growth sleeve.</p>
+  <div class="plan-grid">
+    <label class="field"><span>Corpus ₹</span><input id="swp-corpus" type="number" value="10000000"></label>
+    <label class="field"><span>Monthly draw ₹</span><input id="swp-m" type="number" value="40000"></label>
+    <label class="field"><span>Inflation %</span><input id="swp-inf" type="number" value="6" step="0.1"></label>
+    <label class="field"><span>Horizon years</span><input id="swp-h" type="number" value="30"></label>
+  </div>
+  <button id="swp-go" class="primary">Project</button>
+  <div id="swp-out" style="margin-top:16px"></div>
+</section>
+<section id="view-sip" class="hidden">
+  <div class="title">SIP planner</div>
+  <p class="lede">Conservative / moderate / aggressive bands. Gold only if the SIP is at least ₹10,000. Amounts round to ₹100; leftover goes to the largest sleeve.</p>
+  <div class="plan-grid">
+    <label class="field"><span>Monthly SIP ₹</span><input id="sip-amt" type="number" value="25000"></label>
+    <label class="field"><span>Band</span>
+      <select id="sip-band"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select>
+    </label>
+  </div>
+  <button id="sip-go" class="primary">Allocate</button>
+  <div id="sip-out" style="margin-top:16px"></div>
+</section>
 <section id="view-setup" class="hidden">
   <div class="title">Setup</div>
   <p class="lede">Benchmarks are the only thing that needs setting up. Everything else has a sensible default.</p>
@@ -1955,8 +2007,8 @@ function render(){
   const d=S.cats[S.active];
   renderTabs();
   if($("#rate-title")) $("#rate-title").textContent=cfg.name;
-  $("#catrule").innerHTML=`${esc(cfg.rule)} · Benchmark: <b>${esc(IDX_BY_KEY[cfg.tri].name)}</b> ${
-    TRI[cfg.tri]?'<span style="color:var(--ok)">imported</span>':'<span style="color:var(--warn)">not imported</span>'}`;
+  $("#catrule").innerHTML=`${esc(cfg.rule)} · Benchmark: <b>${esc(cfg.tri && IDX_BY_KEY[cfg.tri] ? IDX_BY_KEY[cfg.tri].name : "peer-only")}</b> ${
+    cfg.tri && TRI[cfg.tri]?'<span style="color:var(--ok)">imported</span>':'<span style="color:var(--warn)">not imported</span>'}`;
   $("#runbtn").innerHTML=`<i class="fa-solid fa-play"></i>${d?"Re-run":"Load & score"}`;
   $("#exportbtn").disabled=!d;
 
@@ -1983,7 +2035,7 @@ function render(){
   $("#tablewrap").innerHTML=`
   <p class="small muted" style="margin-bottom:10px">${d.bench
     ? `Scored against <b>${esc(d.benchName)}</b> and the category average — 2 points per parameter, max ${PARAMS.length*2}.`
-    : `<b style="color:var(--warn)">${esc(IDX_BY_KEY[d.cfg.tri].name)} not imported.</b> Alpha and the capture ratios need it, so they stay blank and scoring falls back to the category average alone (max ${PARAMS.length}).`}
+    : `<b style="color:var(--warn)">${esc((IDX_BY_KEY[d.cfg.tri]||{}).name||"Benchmark")} not imported.</b> Alpha and the capture ratios need it, so they stay blank and scoring falls back to the category average alone (max ${PARAMS.length}).`}
     Plan: <b>${d.plan==="direct"?"Direct":"Regular"}</b>.
     ${d.metricMode==="rolling"
       ? `Alpha, Sortino, both capture ratios and standard deviation are the <b>average across every rolling 3-year window in the last ${d.span} years</b>, not a single trailing reading. 3Y CAGR stays trailing so it still shows recent performance. <b>${d.nQual} of ${d.rows.length}</b> funds are ${d.tenure}y+ with all ${d.maxParams} parameters and are ranked; the rest sit below the line.`
@@ -2279,7 +2331,7 @@ function reviewHolding(row,cat,h){
       ? `CAUTION: a running SWP of ${amt} is being drawn from this fund. Switching stops that income — the withdrawal must be re-established in the replacement, and the exit realises gains on top of the units already being sold. Treat this as an income decision, not just a fund decision.`
       : `A running SWP of ${amt} is drawn from this fund. Factor the withdrawal into any change here.`);
   }
-  if(!hasBench) out.reasons.push(`No benchmark TRI imported for ${cat.cfg.name}, so this compares against the category average alone — import ${IDX_BY_KEY[cat.cfg.tri].name} for the full test.`);
+  if(!hasBench) out.reasons.push(`No benchmark TRI imported for ${cat.cfg.name}, so this compares against the category average alone${cat.cfg.tri && IDX_BY_KEY[cat.cfg.tri] ? " — import "+IDX_BY_KEY[cat.cfg.tri].name+" for the full test." : "."}`);
   if(!CORE_CATEGORIES.includes(cat.cfg.id))
     out.reasons.push(`R7: Kirtan's guidance is that Large or Flexi Cap + Mid + Small is all you need to offer, and everything else can be avoided. ${cat.cfg.name} sits outside that core — a reason to question the allocation itself, separately from this fund's numbers.`);
   return out;
@@ -3305,8 +3357,71 @@ function exportCSV(){
 /* ---------- view router ----------
    One thing on screen at a time. The category picker, the results, the
    portfolio review and the setup never share a page. */
+function round100(n){ return Math.round(n/100)*100; }
+function splitRupees(total, weights){
+  const s=weights.reduce((a,b)=>a+b,0)||1;
+  const raw=weights.map(w=>total*w/s);
+  const rounded=raw.map(round100);
+  let drift=total-rounded.reduce((a,b)=>a+b,0);
+  const order=raw.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).map(x=>x[1]);
+  let k=0;
+  while(drift!==0 && k<50){
+    const i=order[k%order.length], step=drift>0?100:-100;
+    if(rounded[i]+step>=0){ rounded[i]+=step; drift-=step; }
+    k++;
+  }
+  return rounded;
+}
+function renderSwp(){
+  const corpus=+$("#swp-corpus").value||0, monthly=+$("#swp-m").value||0;
+  const inf=(+$("#swp-inf").value||0)/100, horizon=+$("#swp-h").value||30;
+  let annual=monthly*12;
+  let b1=annual*2, b2=annual*3, b3=corpus-b1-b2;
+  if(b3<0){ const t=b1+b2; b1=corpus*(b1/t); b2=corpus*(b2/t); b3=0; }
+  const rows=[];
+  let first=null;
+  const inr=n=>Math.round(n).toLocaleString("en-IN");
+  for(let y=1;y<=horizon;y++){
+    if(y>1) annual*=(1+inf);
+    b1*=1.065; b2*=1.09; b3*=1.12;
+    b1-=annual;
+    if(b1<0){ b2+=b1; b1=0; }
+    if(b2<0){ b3+=b2; b2=0; }
+    if(b3<0 && first==null) first=y;
+    rows.push({y, spend:annual, b1:Math.max(0,b1), b2:Math.max(0,b2), b3:Math.max(0,b3)});
+  }
+  $("#swp-out").innerHTML=`
+    <div class="stats">
+      <div class="stat"><div class="k">Bucket 1 debt</div><div class="v">₹${inr(annual*2)}</div></div>
+      <div class="stat"><div class="k">Bucket 2 hybrid</div><div class="v">₹${inr(annual*3)}</div></div>
+      <div class="stat"><div class="k">Bucket 3 equity</div><div class="v">₹${inr(Math.max(0,corpus-annual*5))}</div></div>
+      <div class="stat"><div class="k">First shortfall</div><div class="v">${first?("Year "+first):"None in horizon"}</div></div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Year</th><th>Spend</th><th>B1</th><th>B2</th><th>B3</th></tr></thead>
+    <tbody>${rows.slice(0,15).map(r=>`<tr><td>${r.y}</td><td>₹${inr(r.spend)}</td><td>₹${inr(r.b1)}</td><td>₹${inr(r.b2)}</td><td>₹${inr(r.b3)}</td></tr>`).join("")}</tbody></table></div>
+    <p class="tiny muted">Showing first 15 years. Bucket 1 spends first; 2 then 3 refill the gap.</p>`;
+}
+const SIP_BANDS={
+  conservative:{eq:.4, hy:.3, dt:.3, g:0},
+  moderate:{eq:.6, hy:.2, dt:.15, g:.05},
+  aggressive:{eq:.75, hy:.1, dt:.1, g:.05},
+};
+function renderSip(){
+  const amt=+$("#sip-amt").value||0;
+  const band=$("#sip-band").value;
+  const w={...SIP_BANDS[band]};
+  if(amt<10000) w.g=0;
+  const keys=["eq","hy","dt","g"], labels=["Equity","Hybrid","Debt","Gold"];
+  const parts=splitRupees(round100(amt), keys.map(k=>w[k]));
+  const inr=n=>n.toLocaleString("en-IN");
+  $("#sip-out").innerHTML=`<div class="stats">${parts.map((n,i)=>`<div class="stat"><div class="k">${labels[i]}</div><div class="v">₹${inr(n)}</div></div>`).join("")}</div>
+    <p class="tiny muted">Gold omitted below ₹10,000 SIP. Remainder after ₹100 rounding sits on the largest sleeve.</p>`;
+}
+
 function showView(v){
-  for(const k of ["rate","pf","setup"]) $("#view-"+k).classList.toggle("hidden",k!==v);
+  for(const k of ["home","rate","pf","swp","sip","setup"]) {
+    const el=$("#view-"+k); if(el) el.classList.toggle("hidden",k!==v);
+  }
   $$("nav.tabs button").forEach(b=>b.setAttribute("aria-current",String(b.dataset.view===v)));
   document.body.classList.toggle("wide-mode", v==="rate"&&!$("#rate-run").classList.contains("hidden"));
   $("#main").className = (v==="rate"&&!$("#rate-run").classList.contains("hidden"))||v==="pf" ? "wide" : "";
@@ -3340,6 +3455,17 @@ function setPlan(p){
 function boot(){
   wireModal(); setMode("nav"); setPlan("regular");
   $$("nav.tabs button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+  $$(".home-card").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.go;
+    if(v==="rate") showRate("pick"); else showView(v);
+    if(v==="swp") renderSwp();
+    if(v==="sip") renderSip();
+  });
+  $("#swp-go") && ($("#swp-go").onclick=renderSwp);
+  $("#sip-go") && ($("#sip-go").onclick=renderSip);
+  ["swp-corpus","swp-m","swp-inf","swp-h","sip-amt","sip-band"].forEach(id=>{
+    const el=$("#"+id); if(el) el.addEventListener("change", id.startsWith("swp")?renderSwp:renderSip);
+  });
   $$("#modewrap button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
   $$("#planwrap button").forEach(b=>b.onclick=()=>setPlan(b.dataset.plan));
 
@@ -3481,7 +3607,7 @@ function boot(){
   wireBrand();
   window.addEventListener("beforeprint", paintPrintHead);
   restoreTRI();
-  renderTRI(null); renderBanner(); render(); showRate("pick");
+  renderTRI(null); renderBanner(); render(); showView("home");
   if(!Object.keys(TRI).length){
     fetchPublishedBundle().then(r=>{
       if(!r.ok) return;
