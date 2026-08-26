@@ -1,0 +1,3397 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MF Ratings — Gohil Insurance (v9.1)</title>
+<!-- v9.1 (Aug 2026): quant & statement parser unchanged from v8.
+     TRI guidance updated — NSE /BackPage endpoint works without login via GET-TRI-DATA.py.
+     No change to scoring formulas or FPA rules. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23272262%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231d75bd%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Csvg%20x%3D%2217%22%20y%3D%228%22%20width%3D%2230%22%20height%3D%2248%22%20viewBox%3D%220%200%20875%201157%22%3E%3Cg%20transform%3D%22translate%280%2C1157%29%20scale%28.1%2C-.1%29%22%20fill%3D%22%23fff%22%20stroke%3D%22none%22%3E%20%3Cpath%20d%3D%22M5510%2011483%20c-2326%20-94%20-4392%20-1659%20-5135%20-3888%20-207%20-620%20-288%20-1126%20-289%20-1800%20-1%20-365%206%20-476%2044%20-773%20242%20-1854%201409%20-3490%203085%20-4322%20747%20-371%201520%20-568%202385%20-610%20282%20-13%201986%20-13%202105%200%20472%2053%20835%20383%20943%20855%2020%2089%2031%202981%2012%203214%20-49%20606%20-349%201120%20-850%201456%20-279%20186%20-684%20314%20-1002%20315%20l-48%200%20-2%20-1582%20-3%20-1583%20-23%20-80%20c-93%20-329%20-340%20-577%20-660%20-662%20-283%20-76%20-949%203%20-1457%20172%20-1816%20605%20-2898%202408%20-2565%204273%20189%201057%20857%202018%201790%202575%20386%20230%20814%20392%201250%20473%20294%2054%20325%2056%201135%2064%20817%208%20799%207%201027%2065%20686%20174%201245%20772%201377%201471%2018%2092%2041%20293%2041%20357%200%2016%20-79%2017%20-1542%2015%20-849%20-1%20-1577%20-3%20-1618%20-5z%22%2F%3E%20%3Cpath%20d%3D%22M7360%208065%20c-349%20-70%20-590%20-369%20-590%20-730%200%20-678%20818%20-1000%201283%20-505%20211%20224%20259%20555%20123%20835%20-146%20300%20-486%20466%20-816%20400z%22%2F%3E%20%3C%2Fg%3E%3C%2Fsvg%3E%3C%2Fsvg%3E">
+<!-- Pico.css (github.com/picocss/pico, 16.7k stars) — semantic, class-light,
+     dark mode built in. The stylesheet below carries the layout and works on
+     its own if this CDN is blocked. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+/* Local base styles, following Pico.css's approach (semantic HTML, class-light,
+   generous whitespace, one accent, dark mode by default). Pico loads from CDN
+   above; this covers the layout and components Pico does not, and keeps the
+   app usable when the CDN is blocked — which has happened on this project. */
+:root{
+  /* Brand: sampled from the Gohil Insurance logo gradient,
+     #272262 (deep indigo, far left) -> #1D75BD (bright blue, far right). */
+  --brand-1:#272262; --brand-2:#1d75bd;
+  --acc:#1f4f93; --acc-soft:#eaf1fa;
+  --ok:#0f7b3d; --ok-bg:#e7f6ec;
+  --warn:#8a5a00; --warn-bg:#fdf3d9;
+  --bad:#b3261e; --bad-bg:#fbe9e8;
+  --ink:#16181d; --ink2:#5b6270; --ink3:#8b93a1;
+  --bg:#f7f8fa; --card:#fff; --line:#e5e7eb; --line2:#f1f2f4;
+  --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.05);
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --brand-1:#3b3489; --brand-2:#3d92d8;
+  --acc:#5fa8e0; --acc-soft:#12253c;
+  --ok:#4ade80; --ok-bg:#0f2a1a;
+  --warn:#fbbf24; --warn-bg:#2e2410;
+  --bad:#f87171; --bad-bg:#2d1615;
+  --ink:#e8eaed; --ink2:#a1a7b3; --ink3:#71787f;
+  --bg:#0f1114; --card:#171a1f; --line:#282c33; --line2:#1f232a;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;font-size:15px}
+h1,h2,h3,p{margin:0}
+main{max-width:900px;margin:0 auto;padding:0 20px 96px}
+.wide{max-width:1400px}
+
+/* --- top bar --- */
+header.bar{position:sticky;top:0;z-index:20;background:var(--card);
+  border-bottom:1px solid var(--line);margin-bottom:28px}
+header.bar::before{content:"";display:block;height:3px;
+  background:linear-gradient(90deg,var(--brand-1),var(--brand-2))}
+.bar-in{max-width:900px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
+.wide .bar-in,body.wide-mode .bar-in{max-width:1400px}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-div{width:1px;height:22px;background:var(--line);flex:none}
+.brand-app{font-weight:650;letter-spacing:-.01em;font-size:14.5px;white-space:nowrap}
+
+/* --- brand mark ---
+   The logo is a vector trace of the supplied artwork, inlined as <symbol>.
+   One --h drives the whole lockup, so it scales from a 22px favicon-ish
+   header mark to a print letterhead without a second asset. */
+.gi-lockup{display:inline-flex;align-items:center;gap:calc(var(--h)*.32);
+  color:var(--brand-2);flex:none}
+.gi-lockup .gi-l-mark{height:var(--h);width:auto;display:block}
+.gi-l-txt{display:flex;flex-direction:column;gap:calc(var(--h)*.14);
+  width:calc(var(--h)*1.93)}
+.gi-l-word,.gi-l-ins{width:100%;height:auto;display:block}
+.gi-l-ins{opacity:.8}
+.gi-mark{width:auto;color:var(--brand-2)}
+html[data-theme="dark"] .gi-lockup,html[data-theme="dark"] .gi-mark{color:#7fbdec}
+nav.tabs{display:flex;gap:2px;margin-left:auto;background:var(--bg);padding:3px;border-radius:10px}
+nav.tabs button{border:0;background:none;color:var(--ink2);font:inherit;font-size:13.5px;
+  padding:7px 14px;border-radius:8px;cursor:pointer}
+nav.tabs button[aria-current="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--shadow)}
+.icon-btn{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center}
+
+/* --- typography --- */
+.title{font-size:22px;font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
+.lede{color:var(--ink2);font-size:14px;margin-bottom:24px;max-width:62ch}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);font-weight:650}
+.muted{color:var(--ink2)}
+.small{font-size:12.5px}
+.tiny{font-size:11.5px}
+.num{font-variant-numeric:tabular-nums}
+
+/* --- surfaces --- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.card.flat{box-shadow:none}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.spread{justify-content:space-between}
+.stack>*+*{margin-top:14px}
+
+/* --- buttons --- */
+button.primary,a.primary{background:var(--acc);color:#fff;border:1px solid var(--acc);
+  padding:11px 20px;border-radius:10px;font:inherit;font-weight:600;font-size:14px;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+button.primary:hover{filter:brightness(1.08)}
+button.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);
+  padding:9px 15px;border-radius:10px;font:inherit;font-size:13.5px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px}
+button.ghost:hover{border-color:var(--acc);color:var(--acc)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.link{background:none;border:0;color:var(--acc);font:inherit;font-size:12.5px;
+  cursor:pointer;padding:0;text-decoration:underline}
+
+/* --- choices: the core interaction --- */
+.choices{display:grid;gap:10px}
+.choices.two{grid-template-columns:1fr 1fr}
+.choice{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 18px;cursor:pointer;font:inherit;color:inherit;transition:.12s}
+.choice:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.07)}
+.choice[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-soft)}
+.choice .ic{width:38px;height:38px;border-radius:10px;background:var(--acc-soft);color:var(--acc);
+  display:grid;place-items:center;flex:none;font-size:15px}
+.choice b{display:block;font-weight:600;font-size:14.5px}
+.choice span{display:block;color:var(--ink2);font-size:12.5px;margin-top:1px}
+.choice .go{margin-left:auto;color:var(--ink3)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:650;
+  background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
+.pill.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+
+/* --- segmented control --- */
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--ink2);font:inherit;font-size:12.5px;
+  padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff;font-weight:600}
+
+/* --- status / notes --- */
+.note{border-radius:10px;padding:11px 14px;font-size:13px;border:1px solid}
+.note.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok)}
+.note.warn{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.note.bad{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
+.note.info{background:var(--bg);border-color:var(--line);color:var(--ink2)}
+.bar-track{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0 8px}
+.bar-track i{display:block;height:100%;background:var(--acc);width:0;transition:width .25s}
+
+/* --- stats --- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+.stat .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);font-weight:650}
+.stat .v{font-size:23px;font-weight:650;letter-spacing:-.02em;margin-top:3px}
+.stat .d{font-size:11.5px;color:var(--ink2)}
+
+/* --- tables --- */
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line2)}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);
+  font-weight:650;position:sticky;top:0;background:var(--card);z-index:1}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+tbody tr:hover{background:var(--acc-soft)}
+tr.cmp{background:var(--bg);font-weight:600}
+.rag{display:inline-block;min-width:26px;padding:2px 7px;border-radius:6px;font-weight:700;font-size:11.5px}
+.rag.g{background:var(--ok-bg);color:var(--ok)}
+.rag.a{background:var(--warn-bg);color:var(--warn)}
+.rag.r{background:var(--bad-bg);color:var(--bad)}
+.rag.n{color:var(--ink3)}
+.verdict{padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:650}
+.verdict.g{background:var(--ok-bg);color:var(--ok)}
+.verdict.a{background:var(--warn-bg);color:var(--warn)}
+.verdict.r{background:var(--bad-bg);color:var(--bad)}
+.verdict.n{background:var(--bg);color:var(--ink2)}
+
+/* --- forms --- */
+input,select,textarea{font:inherit;font-size:13.5px;padding:9px 12px;border-radius:9px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;resize:vertical}
+label.file{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 15px;font-size:13.5px;width:auto}
+label.file:hover{border-color:var(--acc);color:var(--acc)}
+label.file input{display:none}
+.field{display:grid;gap:5px}
+.field>span{font-size:12px;color:var(--ink2)}
+
+/* --- dialog --- */
+.overlay{position:fixed;inset:0;background:rgba(16,24,40,.45);backdrop-filter:blur(3px);
+  display:grid;place-items:center;padding:18px;z-index:60}
+.overlay>div{background:var(--card);border-radius:16px;padding:24px;max-width:640px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:0 24px 48px rgba(16,24,40,.24)}
+.hidden{display:none!important}
+
+/* --- misc --- */
+details{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+summary{cursor:pointer;font-size:13px;color:var(--ink2);font-weight:550}
+summary::marker{color:var(--ink3)}
+details[open] summary{margin-bottom:10px;color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){
+  main{padding:0 14px 80px}
+  .choices.two,.grid2{grid-template-columns:1fr}
+  nav.tabs{gap:0;padding:2px}
+  nav.tabs button{padding:6px 9px;font-size:12px;white-space:nowrap}
+  .bar-in{padding:10px 12px;gap:8px}
+  /* on a phone the logo alone carries the identity — the app name would
+     crowd the tabs off the bar */
+  .brand-div,.brand-app{display:none}
+  .brand .gi-lockup{--h:22px}
+}
+/* --- portfolio review: action-first grouping --- */
+.grouphead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:26px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.grouphead b{font-size:15px}
+.grouphead .small{flex:1;min-width:220px}
+.card.act{border-left:3px solid var(--warn)}
+.card.act:has(.verdict.r),.card.act.crit{border-left-color:var(--bad)}
+details.eviden{border-top:1px solid var(--line2);margin-top:12px;padding-top:10px}
+details.eviden summary{font-size:12.5px;color:var(--ink2);font-weight:550}
+details.eviden[open] summary{margin-bottom:8px}
+
+/* --- client-facing letterhead --- */
+.letterhead{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px 16px;margin-bottom:16px;box-shadow:var(--shadow);
+  border-top:3px solid transparent;
+  border-image:linear-gradient(90deg,var(--brand-1),var(--brand-2)) 1;
+  border-image-width:3px 0 0 0}
+.lh-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.lh-meta{margin-left:auto;text-align:right}
+.lh-doc{font-weight:650;font-size:15px;letter-spacing:-.01em}
+.lh-date{font-size:11.5px;color:var(--ink3)}
+.lh-rule{height:1px;background:var(--line);margin:14px 0 12px}
+.lh-lines>*+*{margin-top:2px}
+.lh-client{margin-top:8px;font-size:13px}
+#printhead,#printfoot{display:none}
+.disclaimer{border-top:1px solid var(--line);margin-top:22px;padding-top:12px;color:var(--ink3)}
+.disclaimer p+p{margin-top:6px}
+.warn-txt{color:var(--warn)}
+
+@media print{
+  /* Print the review, not the app. */
+  @page{margin:14mm 14mm 20mm}
+  /* Chrome repeats a fixed-position element on every printed page, which is
+     the only way to get a running footer without @page margin boxes. */
+  #printfoot{display:flex!important;position:fixed;bottom:0;left:0;right:0;
+    justify-content:space-between;gap:12px;background:#fff;
+    border-top:1px solid var(--line);padding-top:4px;
+    font-size:8.5px;color:var(--ink3)}
+  html[data-theme="dark"]{--ink:#000;--ink2:#333;--ink3:#555;
+    --bg:#fff;--card:#fff;--line:#ccc;--line2:#e5e5e5}
+  header.bar,nav.tabs,.icon-btn,#tribanner,#pf-input,#pfstage,#pf-actions,
+  .overlay,button,label.file,#brandcard,
+  #pfout .letterhead,
+  /* the app's own screen headings are chrome on a client document */
+  #view-pf>.title,#view-pf>.lede,#view-rate>.title,#view-rate>.lede{display:none!important}
+  #printhead{display:block!important}
+  /* Decluttering the screen must never truncate the client's document:
+     every folded panel is forced open for print. */
+  details.eviden,details.eviden>*{display:block!important}
+  details.eviden summary{display:none!important}
+  #view-setup details,#view-rate>details{display:none!important}
+  .grouphead{break-after:avoid;page-break-after:avoid}
+  body{background:#fff;font-size:11.5px}
+  main,main.wide{max-width:none;padding:0}
+  .card{break-inside:avoid;box-shadow:none;page-break-inside:avoid}
+  .letterhead{break-after:avoid}
+  .tbl-wrap{overflow:visible}
+  a[href]::after{content:""}
+}
+
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+
+/* keep Pico from fighting the layout when it does load */
+body>main{padding-top:0}
+article,section{margin:0}
+</style>
+</head>
+<body>
+
+<!-- Gohil Insurance logo, vector-traced from the supplied artwork.
+     Inlined so the app stays one file and the mark prints at any size. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="gi-mark" viewBox="0 0 875 1157"><g transform="translate(0,1157) scale(.1,-.1)" fill="currentColor" stroke="none"> <path d="M5510 11483 c-2326 -94 -4392 -1659 -5135 -3888 -207 -620 -288 -1126 -289 -1800 -1 -365 6 -476 44 -773 242 -1854 1409 -3490 3085 -4322 747 -371 1520 -568 2385 -610 282 -13 1986 -13 2105 0 472 53 835 383 943 855 20 89 31 2981 12 3214 -49 606 -349 1120 -850 1456 -279 186 -684 314 -1002 315 l-48 0 -2 -1582 -3 -1583 -23 -80 c-93 -329 -340 -577 -660 -662 -283 -76 -949 3 -1457 172 -1816 605 -2898 2408 -2565 4273 189 1057 857 2018 1790 2575 386 230 814 392 1250 473 294 54 325 56 1135 64 817 8 799 7 1027 65 686 174 1245 772 1377 1471 18 92 41 293 41 357 0 16 -79 17 -1542 15 -849 -1 -1577 -3 -1618 -5z"/> <path d="M7360 8065 c-349 -70 -590 -369 -590 -730 0 -678 818 -1000 1283 -505 211 224 259 555 123 835 -146 300 -486 466 -816 400z"/> </g></symbol><symbol id="gi-word" viewBox="0 0 2347 438"><g transform="translate(0,438) scale(.1,-.1)" fill="currentColor" stroke="none"> <path d="M1690 4224 c-245 -28 -379 -59 -541 -126 -708 -294 -1125 -1071 -1085 -2018 47 -1079 617 -1801 1536 -1946 142 -23 459 -23 590 -1 333 56 563 191 787 460 l68 80 22 -127 c49 -278 178 -376 493 -376 l120 0 0 1080 0 1080 -811 0 -811 0 4 -182 c4 -216 23 -275 117 -367 108 -106 175 -121 518 -121 l253 0 -6 -28 c-89 -373 -273 -617 -554 -739 -154 -66 -323 -93 -475 -73 -682 85 -1009 530 -1009 1370 1 766 257 1194 779 1300 475 96 874 -62 1067 -424 44 -84 123 -160 205 -199 l68 -32 304 -3 303 -3 -7 73 c-68 728 -551 1189 -1365 1303 -108 15 -494 28 -570 19z"/> <path d="M7615 4219 c-1050 -92 -1699 -876 -1698 -2054 0 -1275 719 -2048 1903 -2048 1047 0 1724 589 1887 1643 26 168 26 636 -1 805 -143 923 -713 1520 -1568 1640 -139 19 -386 26 -523 14z m326 -710 c374 -37 640 -214 807 -536 178 -343 220 -901 101 -1351 -140 -530 -503 -820 -1029 -822 -677 -2 -1090 516 -1090 1367 0 751 333 1249 890 1332 151 22 192 24 321 10z"/> <path d="M12310 4151 c-150 -46 -270 -182 -300 -340 -6 -35 -10 -669 -10 -1847 l0 -1794 415 0 415 0 0 885 0 885 820 0 820 0 0 -885 0 -885 410 0 410 0 0 1995 0 1995 -410 0 -410 0 0 -745 0 -745 -820 0 -820 0 0 745 0 745 -247 -1 c-137 0 -259 -4 -273 -8z"/> <path d="M17814 4146 c-136 -33 -221 -125 -253 -274 -8 -38 -11 -559 -11 -1877 l0 -1825 405 0 405 0 0 1995 0 1995 -247 -1 c-161 0 -266 -5 -299 -13z"/> <path d="M20932 4141 c-109 -38 -202 -124 -254 -236 l-23 -50 -3 -1842 -2 -1843 1380 0 1380 0 0 370 0 370 -975 0 -975 0 0 1625 0 1625 -237 0 c-204 -1 -246 -3 -291 -19z"/> </g></symbol><symbol id="gi-ins" viewBox="0 0 1848 138"><g transform="translate(0,138) scale(.1,-.1)" fill="currentColor" stroke="none"> <path d="M4290 1219 c-172 -30 -270 -134 -278 -300 -9 -186 63 -259 334 -335 191 -54 224 -75 224 -141 0 -123 -227 -130 -402 -14 -70 47 -62 50 -145 -51 l-57 -71 34 -29 c191 -160 543 -183 705 -45 105 88 127 292 45 405 -49 68 -112 98 -374 177 -100 30 -136 58 -136 105 0 119 173 134 350 30 28 -16 54 -30 58 -30 4 1 33 39 65 86 67 99 70 88 -44 149 -110 58 -263 84 -379 64z"/> <path d="M15723 1215 c-170 -37 -324 -173 -385 -340 -27 -75 -36 -242 -18 -324 22 -97 68 -180 145 -256 112 -113 218 -155 390 -155 164 0 268 38 373 135 l53 50 -74 73 -74 74 -62 -45 c-78 -58 -118 -72 -211 -72 -182 0 -305 133 -305 330 0 292 293 427 527 243 21 -16 42 -28 46 -26 13 5 142 155 142 165 0 16 -94 81 -161 112 -106 50 -258 64 -386 36z"/> <path d="M11032 1203 c-20 -37 -442 -1035 -442 -1044 0 -6 46 -9 117 -7 l116 3 47 115 48 115 223 3 224 2 49 -120 48 -120 119 0 c89 0 119 3 118 13 0 6 -100 246 -222 532 l-222 520 -107 3 c-94 2 -108 1 -116 -15z m186 -455 l61 -148 -135 0 c-74 0 -134 3 -134 7 0 5 72 184 116 288 14 35 18 37 24 20 5 -11 35 -86 68 -167z"/> <path d="M60 680 l0 -530 115 0 115 0 0 530 0 530 -115 0 -115 0 0 -530z"/> <path d="M1700 680 l0 -530 115 0 115 0 0 336 0 336 255 -336 256 -336 99 0 100 0 0 530 0 530 -115 0 -115 0 -2 -321 -3 -322 -245 322 -244 321 -108 0 -108 0 0 -530z"/> <path d="M6132 848 c4 -339 6 -367 26 -429 65 -197 222 -289 475 -277 197 10 323 92 389 255 22 56 23 68 26 436 l3 377 -115 0 -116 0 0 -332 c0 -192 -4 -348 -10 -369 -58 -209 -372 -209 -430 0 -6 21 -10 177 -10 369 l0 332 -121 0 -121 0 4 -362z"/> <path d="M8440 681 l0 -531 115 0 115 0 0 170 0 170 93 0 92 -1 113 -169 112 -170 135 0 c74 0 135 2 135 4 0 2 -57 87 -126 188 -108 158 -123 184 -109 193 162 97 215 193 202 363 -10 134 -83 235 -206 284 -53 21 -73 23 -363 26 l-308 4 0 -531z m541 308 c68 -21 94 -59 94 -139 0 -124 -46 -150 -260 -150 l-145 0 0 150 0 150 136 0 c75 0 154 -5 175 -11z"/> <path d="M13010 680 l0 -530 115 0 115 0 0 330 c0 182 3 330 8 330 4 0 120 -149 257 -330 l250 -330 98 0 97 0 0 530 0 530 -115 0 -115 0 -2 -318 -3 -318 -240 315 -240 316 -113 3 -112 3 0 -531z"/> <path d="M17610 680 l0 -530 405 0 405 0 0 105 0 105 -287 2 -288 3 -3 108 -3 107 251 0 250 0 0 105 0 105 -250 0 -250 0 0 105 0 105 285 0 285 0 0 105 0 105 -400 0 -400 0 0 -530z"/> </g></symbol></svg>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">
+      <span class="gi-lockup" style="--h:26px" role="img" aria-label="Gohil Insurance &amp; Investments">
+        <svg viewBox="0 0 875 1157" class="gi-l-mark"><use href="#gi-mark"/></svg>
+        <span class="gi-l-txt">
+          <svg viewBox="0 0 2347 438" class="gi-l-word"><use href="#gi-word"/></svg>
+          <svg viewBox="0 0 1848 138" class="gi-l-ins"><use href="#gi-ins"/></svg>
+        </span>
+      </span>
+      <span class="brand-div"></span>
+      <span class="brand-app">MF Ratings</span>
+    </div>
+    <nav class="tabs">
+      <button data-view="rate"  aria-current="true">Rate funds</button>
+      <button data-view="pf">Portfolio</button>
+      <button data-view="setup">Setup</button>
+    </nav>
+    <button id="theme" class="icon-btn" title="Light / dark"><i class="fa-solid fa-moon"></i></button>
+  </div>
+</header>
+
+<main id="main">
+
+<div id="tribanner"></div>
+<div id="printhead"></div>
+<div id="printfoot"></div>
+
+<!-- ══════════════ RATE ══════════════ -->
+<section id="view-rate">
+  <div id="rate-pick">
+    <div class="title">Which category?</div>
+    <p class="lede">Pick one. Every fund in it is pulled from AMFI, scored on seven parameters against its benchmark and its peers, and ranked.</p>
+    <div id="tabs" class="stack"></div>
+  </div>
+
+  <div id="rate-run" class="hidden">
+    <div class="row spread" style="margin-bottom:14px">
+      <div>
+        <div class="title" id="rate-title"></div>
+        <p id="catrule" class="small muted"></p>
+      </div>
+      <button id="rate-back" class="ghost"><i class="fa-solid fa-arrow-left"></i>Change category</button>
+    </div>
+    <div class="card flat">
+      <div class="row">
+        <button id="runbtn" class="primary"></button>
+        <button id="exportbtn" class="ghost" disabled><i class="fa-solid fa-download"></i>Export CSV</button>
+      </div>
+      <div class="bar-track"><i id="progbar"></i></div>
+      <div id="status" class="small muted"></div>
+    </div>
+    <div id="cards" class="stats"></div>
+    <div id="tablewrap"></div>
+  </div>
+</section>
+
+<!-- ══════════════ PORTFOLIO ══════════════ -->
+<section id="view-pf" class="hidden">
+  <div class="title">Review a client portfolio</div>
+  <p class="lede">Upload the statement or paste the holdings. Every holding is checked against the same seven parameters, then judged on your FPA rules — continue, hold the SIP, or switch out.</p>
+
+  <div id="pf-input" class="card">
+    <div class="choices two" style="margin-bottom:14px">
+      <label class="choice file" style="cursor:pointer">
+        <span class="ic"><i class="fa-solid fa-file-arrow-up"></i></span>
+        <span style="flex:1"><b>Upload a statement</b><span>Excel, CAS PDF or CSV</span></span>
+        <input id="pffile" type="file" accept=".xlsx,.xlsm,.csv,.txt,.pdf" style="display:none">
+      </label>
+      <button class="choice" id="pf-paste-toggle">
+        <span class="ic"><i class="fa-solid fa-keyboard"></i></span>
+        <span style="flex:1"><b>Paste holdings</b><span>One fund per line</span></span>
+      </button>
+    </div>
+    <div id="pf-paste" class="hidden stack">
+      <textarea id="pftext" rows="4" placeholder="HDFC Flexi Cap Fund - Growth, 5000, 250000&#10;Nippon India Small Cap Fund - Growth, 3000"></textarea>
+      <div class="row">
+        <button id="pfrun" class="primary"><i class="fa-solid fa-magnifying-glass-chart"></i>Review</button>
+        <button id="pfsample" class="link">Load an example</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="field" style="flex:1;min-width:200px"><span>Client name (optional — appears on the review)</span>
+        <input id="pfclient" placeholder="e.g. Mr. R. K. Shah"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span id="pfpwdwrap" class="hidden row">
+        <input id="pfpwd" type="password" placeholder="PDF password" style="width:170px">
+        <button id="pfpwdgo" class="ghost">Unlock</button>
+      </span>
+      <span id="pfstatus" class="small muted"></span>
+    </div>
+  </div>
+
+  <div id="pfstage"></div>
+  <div id="pfout"></div>
+  <div class="row hidden" id="pf-actions">
+    <button id="pfprint" class="primary"><i class="fa-solid fa-file-pdf"></i>Print / save as PDF</button>
+    <button id="pfcsv" class="ghost"><i class="fa-solid fa-download"></i>Export review</button>
+    <span class="tiny muted">Both carry your letterhead.</span>
+  </div>
+</section>
+
+<!-- ══════════════ SETUP ══════════════ -->
+<section id="view-setup" class="hidden">
+  <div class="title">Setup</div>
+  <p class="lede">Benchmarks are the only thing that needs setting up. Everything else has a sensible default.</p>
+
+  <div class="card" id="brandcard">
+    <div class="row spread" style="margin-bottom:14px">
+      <div><div class="eyebrow">Your details</div>
+        <div class="small muted">Printed on the portfolio review and on every export.</div></div>
+      <div class="row">
+        <div class="seg" id="brandshowwrap">
+          <button data-show="1">Branded</button><button data-show="0">Plain</button>
+        </div>
+        <button id="brandreset" class="link">Reset</button>
+      </div>
+    </div>
+    <div id="brandpreview" style="margin-bottom:14px"></div>
+    <div class="grid2">
+      <label class="field"><span>Firm</span><input id="b-firm"></label>
+      <label class="field"><span>Your name</span><input id="b-person"></label>
+      <label class="field"><span>ARN</span><input id="b-arn" placeholder="e.g. ARN-123456"></label>
+      <label class="field"><span>Phone</span><input id="b-phone"></label>
+      <label class="field"><span>Email</span><input id="b-email"></label>
+      <label class="field"><span>Address</span><input id="b-address"></label>
+    </div>
+    <p class="tiny muted" style="margin-top:10px">
+      Edits apply immediately and travel inside <b>Save bundle</b> below, so one file
+      restores your details and your TRI data together. The logo itself is built into
+      this file — nothing is fetched.</p>
+  </div>
+
+  <div class="card">
+    <div class="row spread">
+      <div><div class="eyebrow">Benchmark indices</div><div id="trisummary" class="small muted"></div></div>
+      <div class="row">
+        <label class="file"><i class="fa-solid fa-file-arrow-up"></i>Import TRI CSVs
+          <input id="trifile" type="file" accept=".csv,.txt" multiple></label>
+        <label class="file"><i class="fa-solid fa-box-open"></i>Load bundle
+          <input id="tribundle" type="file" accept=".json"></label>
+        <button id="tribundlesave" class="ghost"><i class="fa-solid fa-box-archive"></i>Save bundle</button>
+      </div>
+    </div>
+    <p class="tiny muted" style="margin-top:10px">
+      Benchmarks are the published <b>Total Return Indices</b> (gross), not index funds — an index fund trails its index by expenses and tracking error, which would flatter every fund measured against it.
+      Get them from <a href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener">niftyindices.com → Historical Data → Total returns Index Values</a>, then the <b>csv format</b> link above the table.
+      NSE caps each export at one calendar year, so select all the yearly files at once — <b>they are merged, not replaced</b>.
+      <b>NIFTY 100 + NIFTY 500 alone cover seven categories</b>; four years is enough for alpha and both capture ratios.
+      <b>Recommended:</b> run <code>python3 GET-TRI-DATA.py</code> (no NSE login needed) — it writes a fresh <code>MF-TRI-bundle.json</code>. Then hit <b>Load bundle</b>. Or download yearly CSVs manually from the link above. Hit <b>Save bundle</b> so one file restores everything on any device.
+    </p>
+    <div id="tritable" style="margin-top:12px"></div>
+    <div id="tripending"></div>
+    <div id="trireport" class="tiny" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:12px">Scoring options</div>
+    <div class="stack">
+    
+        <div class="field"><span>Plan</span>
+          <div id="planwrap" class="seg">
+            <button data-plan="regular">Regular (distributor)</button>
+            <button data-plan="direct">Direct</button>
+          </div><span id="planhint" class="tiny muted"></span></div>
+        <div class="field"><span>Rolling return span</span>
+          <div id="spanwrap" class="seg">
+            <button data-span="10">10 years</button><button data-span="7">7 years</button><button data-span="5">5 years</button>
+          </div></div>
+        <div class="field"><span>Metric window</span>
+          <div id="modewrap2" class="seg">
+            <button data-mm="rolling">Rolling 3Y across the span</button>
+            <button data-mm="trailing">Trailing 3Y only</button>
+          </div><span id="mmhint" class="tiny muted"></span></div>
+        <div class="field"><span>Minimum years since launch</span>
+          <div id="tenurewrap" class="seg">
+            <button data-tenure="10">10 years</button><button data-tenure="7">7 years</button>
+            <button data-tenure="5">5 years</button><button data-tenure="3">3 years</button>
+          </div><span id="tenurehint" class="tiny muted"></span></div>
+        <div class="field"><span>Funds per category</span>
+          <div id="capwrap" class="seg">
+            <button data-cap="75">75</button><button data-cap="150">150</button><button data-cap="400">All</button>
+          </div><span id="caphint" class="tiny muted"></span></div>
+        <div class="field"><span>3Y rolling source</span>
+          <div id="modewrap" class="seg">
+            <button data-mode="nav">Computed from AMFI NAV</button>
+            <button data-mode="external">External sites + manual</button>
+          </div><span id="modehint" class="tiny muted"></span></div>
+          </div>
+  </div>
+
+  <div class="card">
+    <div class="row spread">
+      <div><div class="eyebrow">Connection</div><div class="small muted">Run this if a category fails to load.</div></div>
+      <button id="diagbtn" class="ghost"><i class="fa-solid fa-stethoscope"></i>Test AMFI connection</button>
+    </div>
+    <div id="diagcard" class="hidden" style="margin-top:12px"><div id="diagout" class="tiny"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:8px">Rolling returns from a vendor</div>
+    <p class="tiny muted">Rolling returns are computed from AMFI NAV on Advisorkhoj's convention and verified against their published figures, so this is optional. Import a CSV only if you want a vendor's own numbers instead.</p>
+    <label class="file" style="margin-top:10px"><i class="fa-solid fa-file-csv"></i><span id="csvlabel">Import rolling returns</span>
+      <input id="csvfile" type="file" accept=".csv,.txt,.tsv"></label>
+  </div>
+
+  <details>
+    <summary>How a fund is scored</summary>
+    <p class="small muted">Seven parameters: 3Y CAGR, 3Y rolling return, Jensen's alpha, Sortino, upside capture, downside capture and standard deviation. Each scores 2 when it beats <b>both</b> the benchmark and the category average, 1 for one of the two, 0 for neither — direction respected, so lower standard deviation and lower downside capture are wins. Composite out of 14. A parameter with no data is skipped, never scored zero.</p>
+    <p class="small muted" style="margin-top:8px">Beta is calculated because Jensen's alpha requires it, but it is not shown or scored — neither a high nor a low beta is inherently better. Rolling returns take one 3-year window per trading day across the span and average them, matching Advisorkhoj to within 0.005 percentage points on verified windows.</p>
+  </details>
+</section>
+
+</main>
+
+<!-- dialogs -->
+<div id="upmodal" class="overlay hidden"><div style="max-width:560px">
+  <div class="row spread" style="margin-bottom:10px">
+    <h3 style="font-size:15px;font-weight:650">Update benchmark data</h3>
+    <button id="up-close" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div id="up-log" class="tiny" style="margin-bottom:14px"></div>
+  <div id="up-routes" class="hidden">
+    <div class="choices">
+      <a class="choice" href="https://www.niftyindices.com/reports/historical-data" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+        <span class="ic"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+        <span style="flex:1"><b>Download from NSE now</b><span>Historical Data → Total Returns Index → export CSV, then Import below</span></span>
+        <span class="go"><i class="fa-solid fa-chevron-right"></i></span></a>
+      <div class="choice" style="cursor:default">
+        <span class="ic"><i class="fa-solid fa-bolt"></i></span>
+        <span style="flex:1"><b>Run the auto-fetcher (recommended)</b>
+          <span>Run <code>python3 GET-TRI-DATA.py</code> on your PC (no login). It downloads the main indices and writes <code>MF-TRI-bundle.json</code>. Then just <b>Load bundle</b>. About 30–60 seconds, once a month.</span></span></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <label class="file"><i class="fa-solid fa-box-open"></i>Load bundle
+        <input id="up-bundle" type="file" accept=".json"></label>
+      <label class="file"><i class="fa-solid fa-file-arrow-up"></i>Import CSVs
+        <input id="up-csv" type="file" accept=".csv,.txt" multiple></label>
+    </div>
+  </div>
+</div></div>
+<div id="rollmodal" class="overlay hidden"><div>
+  <div class="row spread" style="margin-bottom:6px">
+    <div><h3 id="roll-title" style="font-size:15px;font-weight:650"></h3>
+      <p id="roll-sub" class="tiny muted" style="margin-top:4px"></p></div>
+    <button id="roll-close" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div id="roll-stats" class="stats" style="margin:16px 0"></div>
+  <div class="eyebrow" style="margin-bottom:6px">Distribution of every window</div>
+  <div id="roll-buckets" style="margin-bottom:16px"></div>
+  <div class="eyebrow" style="margin-bottom:6px">First and last windows</div>
+  <div id="roll-sample" style="margin-bottom:16px"></div>
+  <button id="roll-dl" class="primary" style="width:100%;justify-content:center"><i class="fa-solid fa-download"></i>Download every window as CSV</button>
+</div></div>
+
+<div id="modal" class="overlay hidden"><div style="max-width:480px">
+  <h3 id="m-title" style="font-size:15px;font-weight:650"></h3>
+  <p class="tiny muted">Fund <span id="m-count"></span> · paused, not frozen</p>
+  <p id="m-fund" class="small" style="font-weight:600;margin:10px 0 6px"></p>
+  <p id="m-err" class="tiny" style="color:var(--bad);margin-bottom:10px"></p>
+  <p id="m-proxy" class="note info tiny" style="margin-bottom:14px"></p>
+  <div class="field"><span>3Y rolling return average (%)</span>
+    <div class="row"><input id="m-input" type="number" step="0.01" placeholder="18.42" style="flex:1">
+    <button id="m-ok" class="primary">Use</button></div></div>
+  <div class="grid2" style="margin-top:12px">
+    <button id="m-useproxy" class="ghost">Use NAV proxy</button>
+    <button id="m-allproxy" class="ghost">Proxy for all remaining</button>
+    <button id="m-skip" class="ghost">Skip this fund</button>
+    <button id="m-allskip" class="ghost">Skip all remaining</button>
+  </div>
+</div></div>
+
+<script>
+/* ===================== QUANT CORE ===================== */
+const DAY=86400000, TD=250, RF=0.065;
+const MIN_SD=0.005;            // annualised; below this the ratios are noise
+
+function buildSeries(pairs){
+  const m=new Map();
+  for(const [t,v] of pairs) if(Number.isFinite(v)&&v>0) m.set(t,v);
+  if(m.size<2) return null;
+  const ks=[...m.keys()].sort((a,b)=>a-b);
+  const t0=ks[0], n=Math.round((ks[ks.length-1]-t0)/DAY)+1;
+  if(n<2) return null;
+  const v=new Float64Array(n);
+  const real=new Uint8Array(n);        // 1 = an actual published NAV, 0 = forward-filled
+  let cur=m.get(t0);
+  for(let i=0;i<n;i++){
+    const h=m.get(t0+i*DAY);
+    if(h!==undefined){cur=h;real[i]=1;}
+    v[i]=cur;
+  }
+  return {t0,v,n,real};
+}
+
+/* Calendar-year arithmetic. Advisorkhoj's windows run 01-08-2016 -> 01-08-2019:
+   the SAME calendar date three years on, which is 1095 days here, not the 1096
+   a fixed 365.25-day offset would give. Verified against their published
+   figures — see ROLLING_KNOWN_ANSWERS below. */
+function addYears(t,y){
+  const d=new Date(t);
+  // 29 Feb has no counterpart in a non-leap year, so it rolls to 1 Mar
+  // (Date.UTC normalises it). One window in ~1,800 is affected; clamping to
+  // 28 Feb instead would be equally arbitrary, so the roll-forward stands.
+  return Date.UTC(d.getUTCFullYear()+y, d.getUTCMonth(), d.getUTCDate());
+}
+const yrs=y=>Math.floor(y*365.25+0.5);
+const spanYears=s=>(s.n-1)/365.25;
+
+/** trailing window start index; null when history is short */
+function win(s,years){
+  const i=s.n-1-yrs(years);
+  return i<-31?null:Math.max(0,i);
+}
+
+/* 1. CAGR over trailing `years` */
+function cagr(s,years=3){
+  const i=win(s,years); if(i===null) return null;
+  const a=s.v[i], b=s.v[s.n-1];
+  if(!(a>0&&b>0)) return null;
+  const t=(s.n-1-i)/365.25;
+  return t<=0?null:(Math.pow(b/a,1/t)-1)*100;
+}
+
+/* daily log-free simple returns on TRADING-day spacing.
+   NAV is forward-filled to calendar days, so consecutive calendar diffs
+   include zero-return weekends which would deflate volatility. We sample
+   only days where the NAV actually moved off a stale fill. */
+function dailyReturns(s,years=3){
+  const i=win(s,years); if(i===null) return null;
+  const out=[];
+  for(let k=i+1;k<s.n;k++){
+    const a=s.v[k-1], b=s.v[k];
+    if(a>0&&b>0&&b!==a) out.push(b/a-1);   // drop stale-fill flat days
+  }
+  return out.length>=100?out:null;
+}
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+
+/* 3. annualised standard deviation, x sqrt(250) */
+function stdev(s,years=3){
+  const r=dailyReturns(s,years); if(!r) return null;
+  const m=mean(r);
+  const v=r.reduce((acc,x)=>acc+(x-m)*(x-m),0)/(r.length-1);
+  return Math.sqrt(v)*Math.sqrt(TD)*100;
+}
+
+/* annualised downside deviation vs the daily risk-free MAR */
+function downsideDev(s,years=3){
+  const r=dailyReturns(s,years); if(!r) return null;
+  const mar=Math.pow(1+RF,1/TD)-1;
+  let acc=0;
+  for(const x of r){ const d=Math.min(x-mar,0); acc+=d*d; }
+  return Math.sqrt(acc/r.length)*Math.sqrt(TD)*100;
+}
+
+/* 4 & 5 */
+function sortino(c,dd){
+  if(c==null||dd==null||dd<MIN_SD*100) return null;
+  const v=(c-RF*100)/dd;
+  return Math.abs(v)>50?null:v;          // "capped sensibly"
+}
+
+
+/* 2. Rolling return — Advisorkhoj's exact convention.
+   "3-year rolling return over a 10-year period" means: start 10 years back,
+   and for EVERY trading day from there until 3 years before today, take the
+   annualised return of the 3-year window BEGINNING that day. Windows therefore
+   span the whole 10 years and only 10 years of NAV is needed.
+
+   This is the opposite of a trailing window (each observation looking BACK 3
+   years), which for a 10-year span would need 13 years of history and cover a
+   different set of periods entirely. */
+function rollingReturns(s,rollY=3,spanY=10){
+  const endT=s.t0+(s.n-1)*DAY;
+  const firstObs=addYears(endT,-spanY);
+  const lastObs=addYears(endT,-rollY);
+  if(firstObs<s.t0-DAY) return null;                 // not enough history
+  const out=[];
+  const i0=Math.max(0,Math.round((firstObs-s.t0)/DAY));
+  const i1=Math.min(s.n-1,Math.round((lastObs-s.t0)/DAY));
+  for(let i=i0;i<=i1;i++){
+    if(!s.real[i]) continue;                         // START must be a real trading day
+    const startT=s.t0+i*DAY, endW=addYears(startT,rollY);
+    const j=Math.round((endW-s.t0)/DAY);
+    if(j<0||j>=s.n) continue;
+    // The END may land on a weekend or holiday; the last published NAV carries
+    // forward, which is what Advisorkhoj does — verified on 03-08-2016 and
+    // 04-08-2016, whose +3y dates are a Saturday and a Sunday.
+    const a=s.v[i], b=s.v[j];
+    if(a>0&&b>0) out.push({s:startT, e:endW, r:Math.pow(b/a,1/rollY)-1});
+  }
+  return out.length?out:null;
+}
+
+/* Advisorkhoj-style distribution buckets */
+const ROLL_BUCKETS=[
+  {label:"Negative",  lo:-Infinity, hi:0},
+  {label:"0 – 8%",    lo:0,   hi:8},
+  {label:"8 – 10%",   lo:8,   hi:10},
+  {label:"10 – 12%",  lo:10,  hi:12},
+  {label:"12 – 15%",  lo:12,  hi:15},
+  {label:"15 – 20%",  lo:15,  hi:20},
+  {label:"Above 20%", lo:20,  hi:Infinity},
+];
+function rollingProxy(s,rollY=3,spanY=10){
+  const w=rollingReturns(s,rollY,spanY);
+  if(!w) return null;
+  const r=w.map(x=>x.r*100);
+  const sorted=[...r].sort((a,b)=>a-b);
+  const n=r.length;
+  const pct=q=>sorted[Math.min(n-1,Math.max(0,Math.floor(q*(n-1))))];
+  return {
+    value:r.reduce((a,b)=>a+b,0)/n, obs:n, years:spanY, roll:rollY,
+    median:pct(.5), min:sorted[0], max:sorted[n-1],
+    p25:pct(.25), p75:pct(.75),
+    negative:r.filter(x=>x<0).length/n*100,
+    from:new Date(w[0].s).toISOString().slice(0,10),
+    to:new Date(w[n-1].e).toISOString().slice(0,10),
+    buckets:ROLL_BUCKETS.map(b=>({...b, n:r.filter(x=>x>=b.lo&&x<b.hi).length,
+                                  pct:r.filter(x=>x>=b.lo&&x<b.hi).length/n*100})),
+    windows:w,                                    // every single window, kept
+  };
+}
+/* Ground truth from Advisorkhoj (HDFC Flexi Cap Fund - Growth Plan, AMFI NAV).
+   Used by validateRolling() so the convention can be re-checked at any time. */
+const ROLLING_KNOWN_ANSWERS=[
+  {from:"2016-08-01",nav0:482.787,to:"2019-08-01",nav1:635.616,published:9.60},
+  {from:"2016-08-02",nav0:479.476,to:"2019-08-02",nav1:632.074,published:9.65},
+];
+function validateRolling(){
+  return ROLLING_KNOWN_ANSWERS.map(k=>{
+    const got=(Math.pow(k.nav1/k.nav0,1/3)-1)*100;
+    return {...k,computed:+got.toFixed(4),diff:+Math.abs(got-k.published).toFixed(4),
+            ok:Math.abs(got-k.published)<0.01};
+  });
+}
+
+/* ---------- monthly series (alpha, beta, capture ratios) ---------- */
+function monthKey(t0,i){const d=new Date(t0+i*DAY);return d.getUTCFullYear()*12+d.getUTCMonth();}
+function monthlyReturns(s,years=3){
+  const i=win(s,years); if(i===null) return null;
+  const me=[]; let k=monthKey(s.t0,i);
+  for(let j=i;j<s.n;j++){const kk=monthKey(s.t0,j);
+    if(kk!==k){me.push({k,v:s.v[j-1]});k=kk;}}
+  me.push({k,v:s.v[s.n-1]});
+  const out=[];
+  for(let j=1;j<me.length;j++) out.push({k:me[j].k, r:me[j].v/me[j-1].v-1});
+  return out.length>=24?out:null;
+}
+function pairMonthly(f,b,years=3){
+  const fm=monthlyReturns(f,years), bm=monthlyReturns(b,years);
+  if(!fm||!bm) return null;
+  const map=new Map(bm.map(x=>[x.k,x.r])), F=[],B=[];
+  for(const {k,r} of fm) if(map.has(k)){F.push(r);B.push(map.get(k));}
+  return F.length>=24?{F,B}:null;
+}
+
+/* 7. Beta — slope of fund vs benchmark monthly returns */
+function beta(f,b,years=3){
+  const p=pairMonthly(f,b,years); if(!p) return null;
+  const mf=mean(p.F), mb=mean(p.B);
+  let cov=0,varb=0;
+  for(let i=0;i<p.F.length;i++){cov+=(p.F[i]-mf)*(p.B[i]-mb);varb+=(p.B[i]-mb)**2;}
+  return varb===0?null:cov/varb;
+}
+
+/* 8. Jensen's alpha (% p.a.) = Rf_fund − [Rf + β(Rf_bench − Rf)]
+   Uses the same 3Y CAGRs shown in the table, so the row is self-consistent. */
+function alpha(fundCagr,benchCagr,bta){
+  if(fundCagr==null||benchCagr==null||bta==null) return null;
+  const rf=RF*100;
+  const a=fundCagr-(rf+bta*(benchCagr-rf));
+  return Math.abs(a)>100?null:a;
+}
+
+/* 9 & 10. Capture ratios — Morningstar convention: compounded fund return over
+   the months the benchmark rose (fell), divided by the benchmark's own
+   compounded return over those same months. Percent. */
+function captureRatios(f,b,years=3){
+  const p=pairMonthly(f,b,years); if(!p) return [null,null];
+  const cap=dir=>{
+    let gf=1,gb=1,n=0;
+    for(let i=0;i<p.B.length;i++){
+      if(dir>0?p.B[i]>0:p.B[i]<0){gf*=1+p.F[i];gb*=1+p.B[i];n++;}
+    }
+    if(n<3) return null;
+    const bg=gb-1; if(bg===0) return null;
+    const v=((gf-1)/bg)*100;
+    return Math.abs(v)>500?null:v;
+  };
+  return [cap(1),cap(-1)];
+}
+
+/* ===================== ROLLING METRIC WINDOWS =====================
+   "Metrics on 10 years of history, in the rolling 3-year format."
+
+   Instead of one trailing 3-year reading, every risk metric is computed on
+   EVERY 3-year window across the span and averaged. A fund cannot ride one
+   lucky stretch: to score well it has to have been good in most 3-year
+   periods an investor could actually have held it.
+
+   Two deliberate choices:
+
+   * Windows step MONTHLY, not daily. Consecutive daily windows share 99.9%
+     of their data, so 85 monthly windows carry essentially the information
+     of 1,733 daily ones at 1/20th the cost. The rolling RETURN parameter
+     keeps its daily windows untouched — that one is validated to 0.005pp
+     against Advisorkhoj's published figures and is not worth disturbing.
+
+   * 3Y CAGR stays TRAILING. Averaging 3-year CAGRs over 10 years is the
+     definition of the rolling return, so making it rolling too would score
+     the same quantity twice and quietly double its weight. Keeping it
+     trailing preserves the contrast the table is for: what the fund has
+     done lately, beside what it has done across the decade.
+
+   Each window reuses the same functions as the single-window path, on a
+   view of the series that ends at that window. No parallel implementation
+   of the maths, so the two modes cannot drift apart. */
+const ROLL_STEP_DAYS = 30;
+const MIN_ROLL_WINDOWS = 6;
+
+/** zero-copy view of `s` ending at index j — a trailing window of the view
+    is therefore a window ending at j. */
+function sliceTo(s,j){
+  return {t0:s.t0, v:s.v.subarray(0,j+1), real:s.real.subarray(0,j+1), n:j+1};
+}
+
+function windowEnds(s,rollY,spanY){
+  const first=s.n-1-yrs(spanY)+yrs(rollY);
+  const j0=Math.max(yrs(rollY),first);
+  const last=s.n-1;
+  if(j0>last) return [];
+  const out=[];
+  for(let j=j0;j<=last;j+=ROLL_STEP_DAYS) out.push(j);
+  if(out[out.length-1]!==last) out.push(last);   // always include today
+  return out;
+}
+
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+
+function rollingMetrics(s,bench,rollY=3,spanY=10){
+  const ends=windowEnds(s,rollY,spanY);
+  if(ends.length<MIN_ROLL_WINDOWS) return null;
+  // A 4-year fund has windows, but nothing like a 10-year record. Roll over
+  // what exists and label it, rather than let a short history masquerade as a
+  // decade of evidence.
+  const have=spanYears(s);
+  const partial=have < spanY-0.5;
+  const A={stdev:[],sortino:[],alpha:[],up_capture:[],down_capture:[],_beta:[]};
+  let used=0, firstT=null, lastT=null;
+  for(const j of ends){
+    const fs=sliceTo(s,j);
+    let bs=null;
+    if(bench){
+      const jb=Math.round((s.t0+j*DAY-bench.t0)/DAY);
+      if(jb>=yrs(rollY)&&jb<bench.n) bs=sliceTo(bench,jb);
+    }
+    const c=cagr(fs,rollY), sd=stdev(fs,rollY), dd=downsideDev(fs,rollY);
+    if(c==null&&sd==null) continue;
+    used++;
+    if(firstT==null) firstT=s.t0+j*DAY;
+    lastT=s.t0+j*DAY;
+    if(sd!=null) A.stdev.push(sd);
+    const so=sortino(c,dd);   if(so!=null) A.sortino.push(so);
+    if(bs){
+      const bta=beta(fs,bs,rollY), bc=cagr(bs,rollY);
+      if(bta!=null) A._beta.push(bta);
+      const al=alpha(c,bc,bta); if(al!=null) A.alpha.push(al);
+      const [up,dn]=captureRatios(fs,bs,rollY);
+      if(up!=null) A.up_capture.push(up);
+      if(dn!=null) A.down_capture.push(dn);
+    }
+  }
+  if(used<MIN_ROLL_WINDOWS) return null;
+  const iso=t=>new Date(t).toISOString().slice(0,10);
+  return {
+    stdev:avg(A.stdev), sortino:avg(A.sortino), alpha:avg(A.alpha),
+    up_capture:avg(A.up_capture), down_capture:avg(A.down_capture),
+    _beta:avg(A._beta),
+    _windows:used, _counts:Object.fromEntries(
+      Object.entries(A).map(([k,v])=>[k,v.length])),
+    _from:iso(firstT), _to:iso(lastT),
+    _partial:partial, _spanUsed:Math.round(Math.min(have,spanY)*10)/10,
+  };
+}
+
+/* Which window convention the app is using. "rolling" is the default:
+   the user asked for metrics over 10 years in the rolling 3-year format. */
+let METRIC_MODE="rolling";
+
+function navMetrics(s,bench){
+  const c=cagr(s,3), sd=stdev(s,3), dd=downsideDev(s,3);
+  // beta is an intermediate, not an output: Jensen's alpha needs it.
+  const bta = bench? beta(s,bench,3) : null;
+  const bc  = bench? cagr(bench,3)   : null;
+  const [up,down] = bench? captureRatios(s,bench,3) : [null,null];
+  const trailing={ cagr3y:c, stdev:sd, sortino:sortino(c,dd),
+           alpha:alpha(c,bc,bta), up_capture:up, down_capture:down,
+           // underscore = internal only. Never in PARAMS, never scored, never a
+           // column. The FPA exit rule ("check Std Dev and Beta are lower than
+           // peers") needs it, so it is carried but not surfaced.
+           _beta:bta, _mode:"trailing", _windows:1 };
+  if(METRIC_MODE!=="rolling") return trailing;
+
+  const R=rollingMetrics(s,bench,3,ROLL_SPAN);
+  if(!R){
+    // Too short for the rolling treatment. Fall back rather than blank the
+    // row, and mark it so the table can say the fund was judged on less.
+    return {...trailing, _mode:"trailing-fallback"};
+  }
+  return { cagr3y:c,                    // trailing, deliberately — see above
+           stdev:R.stdev, sortino:R.sortino, alpha:R.alpha,
+           up_capture:R.up_capture, down_capture:R.down_capture,
+           _beta:R._beta, _mode:R._partial?"rolling-partial":"rolling",
+           _spanUsed:R._spanUsed, _windows:R._windows,
+           _counts:R._counts, _mFrom:R._from, _mTo:R._to,
+           _trailing:trailing };       // kept so both can be shown
+}
+
+/* ===================== SCORING ===================== */
+const PARAMS=[
+  {key:"cagr3y",      short:"3Y CAGR",   label:"3-Year CAGR",              dir:1,  unit:"%", src:"AMFI NAV"},
+  {key:"rolling",     short:"3Y Rolling",label:"3Y Rolling Return Avg",    dir:1,  unit:"%", src:"AMFI NAV"},
+  {key:"alpha",       short:"Alpha",     label:"Jensen's Alpha (% p.a.)",  dir:1,  unit:"%", src:"NAV + benchmark TRI"},
+  {key:"sortino",     short:"Sortino",   label:"Sortino Ratio",            dir:1,  unit:"",  src:"AMFI NAV"},
+  {key:"up_capture",  short:"Up Capt",   label:"Upside Capture Ratio",     dir:1,  unit:"%", src:"NAV + benchmark TRI"},
+  {key:"down_capture",short:"Down Capt", label:"Downside Capture Ratio",   dir:-1, unit:"%", src:"NAV + benchmark TRI"},
+  {key:"stdev",       short:"Std Dev",   label:"Annualised Std Deviation", dir:-1, unit:"%", src:"AMFI NAV"},
+];
+/* Sharpe, Beta and Max Drawdown removed at the user's request.
+   Beta is still COMPUTED — Jensen's alpha is defined as
+       alpha = Rp - [Rf + beta x (Rb - Rf)]
+   so it cannot be produced without beta. It is simply no longer displayed
+   or scored. Sharpe and Max Drawdown are no longer computed at all. */
+const INFO_PARAMS=[];
+
+/** 2 = beats benchmark AND category, 1 = beats one, 0 = neither, null = no data */
+function ragPoint(f,b,c,dir){
+  if(f==null||b==null||c==null) return null;
+  return dir===1 ? (f>b?1:0)+(f>c?1:0) : (f<b?1:0)+(f<c?1:0);
+}
+/* Four hybrid categories (Conservative Hybrid, Multi Asset, Equity Savings,
+   Arbitrage) have no index fund that could stand in as a benchmark. Rather than
+   score them as all-blank, they fall back to a peer-only comparison worth 1
+   point per parameter instead of 2, and the UI says which mode is in force. */
+function scoreFund(m,bm,cat){
+  const hasBM=!!bm;
+  const per=hasBM?2:1;
+  const pts=PARAMS.map(p=>{
+    const f=m[p.key], cv=cat?.[p.key];
+    if(f==null||cv==null) return null;
+    if(!hasBM) return (p.dir===1?f>cv:f<cv)?1:0;
+    const bv=bm[p.key]; if(bv==null) return null;
+    return ragPoint(f,bv,cv,p.dir);
+  });
+  const got=pts.filter(x=>x!=null);
+  const total=got.reduce((a,b)=>a+b,0);
+  return { pts, total:got.length?total:null, n:got.length, max:got.length*per, per,
+           pct:got.length?total/(per*got.length):null };
+}
+function categoryAverage(rows){
+  const out={}; let most=0;
+  { const v=rows.map(r=>r.m._beta).filter(x=>x!=null&&Number.isFinite(x));
+    out._beta = v.length?mean(v):null; }
+  for(const p of PARAMS){
+    const v=rows.map(r=>r.m[p.key]).filter(x=>x!=null&&Number.isFinite(x));
+    out[p.key]=v.length?mean(v):null;
+    if(v.length>most) most=v.length;
+  }
+  // Each parameter averages only the funds that HAVE it, so contributor count
+  // varies by column. Report the largest so the label cannot overstate.
+  out._n=most;
+  return out;
+}
+
+// ── brand.js ──────────────────────────────────────────────────────────
+// Gohil Insurance & Investments identity.
+//
+// The "G" mark and the GOHIL / INSURANCE wordmark are vector traces of the
+// supplied logo (potrace), inlined as <symbol> in shell.html — so the app
+// stays a single file with no image requests and the logo stays crisp at any
+// size and on any printer.
+//
+// Firm details are DEFAULTS, not constants. They are editable in Setup and
+// travel in the same bundle JSON as the TRI data, so one import restores both.
+
+const BRAND_DEFAULTS = {
+  firm:    "Gohil Insurance & Investments",
+  person:  "Harshdipsinh Pradipsinh Gohil",
+  role:    "AMFI Registered Mutual Fund Distributor",
+  arn:     "",                       // ARN disclosure — AMFI requires it on client material
+  phone:   "7698997894",
+  email:   "gohilinvestments@gmail.com",
+  address: "F-2, Shri Krishna Complex, Bhavnagar, Gujarat",
+  tagline: "Independent fund research for our clients",
+  show:    true,                     // show branding on screen + in exports
+};
+
+let BRAND = { ...BRAND_DEFAULTS };
+
+function brandGet(){ return BRAND; }
+function brandSet(patch){ Object.assign(BRAND, patch||{}); }
+function brandReset(){ BRAND = { ...BRAND_DEFAULTS }; }
+
+/** The "G" mark alone. size = css px height. */
+function markSVG(size, cls){
+  return `<svg class="gi-mark ${cls||""}" viewBox="0 0 875 1157" `
+       + `style="height:${size}px" role="img" aria-label="Gohil Insurance">`
+       + `<use href="#gi-mark"/></svg>`;
+}
+
+/** Mark + stacked GOHIL / INSURANCE, laid out horizontally for a header. */
+function lockupSVG(size){
+  return `<span class="gi-lockup" style="--h:${size}px" role="img" aria-label="Gohil Insurance">`
+       + `<svg viewBox="0 0 875 1157" class="gi-l-mark"><use href="#gi-mark"/></svg>`
+       + `<span class="gi-l-txt">`
+       +   `<svg viewBox="0 0 2347 438" class="gi-l-word"><use href="#gi-word"/></svg>`
+       +   `<svg viewBox="0 0 1848 138" class="gi-l-ins"><use href="#gi-ins"/></svg>`
+       + `</span></span>`;
+}
+
+/** One-line contact string, skipping anything the user has cleared. */
+function brandContactLine(){
+  const b = BRAND, bits = [];
+  // He may type "ARN-123456" or just "123456" — don't end up with "ARN ARN-…".
+  if(b.arn)   bits.push(/^arn/i.test(b.arn) ? b.arn : "ARN " + b.arn);
+  if(b.phone) bits.push(b.phone);
+  if(b.email) bits.push(b.email);
+  return bits.join("  ·  ");
+}
+
+/**
+ * Letterhead for client-facing output (portfolio review, print, PDF).
+ * `sub` is the document title, e.g. "Portfolio Review".
+ */
+function letterheadHTML(sub, client){
+  const b = BRAND;
+  if(!b.show) return "";
+  const when = new Date().toLocaleDateString("en-IN",
+                 {day:"numeric", month:"long", year:"numeric"});
+  return `<div class="letterhead">
+    <div class="lh-top">
+      ${lockupSVG(38)}
+      <div class="lh-meta">
+        <div class="lh-doc">${esc(sub||"")}</div>
+        <div class="lh-date">${when}</div>
+      </div>
+    </div>
+    <div class="lh-rule"></div>
+    <div class="lh-lines">
+      <div><b>${esc(b.firm)}</b>${b.person?" · "+esc(b.person):""}</div>
+      <div class="tiny muted">${esc(b.role)}${brandContactLine()?"  ·  "+esc(brandContactLine()):""}</div>
+      ${b.address?`<div class="tiny muted">${esc(b.address)}</div>`:""}
+      ${client?`<div class="lh-client">Prepared for: <b>${esc(client)}</b></div>`:""}
+    </div>
+  </div>`;
+}
+
+/** Footer that must accompany any client-facing output. */
+const BRAND_DISCLAIMER =
+  "Mutual fund investments are subject to market risks. Read all scheme related "
++ "documents carefully. Past performance is not indicative of future returns. "
++ "The figures here are computed from published AMFI NAV history and benchmark "
++ "Total Return Index data; they are a research input and not a recommendation "
++ "to buy, sell or hold any scheme.";
+
+function disclaimerHTML(){
+  const b = BRAND;
+  return `<div class="disclaimer">
+    <p class="tiny">${BRAND_DISCLAIMER}</p>
+    ${b.show && !b.arn ? `<p class="tiny warn-txt">Add your ARN in Setup — AMFI requires
+      it on material shared with clients.</p>` : ""}
+  </div>`;
+}
+
+/** Header rows prefixed to every CSV export, so a saved file identifies itself. */
+function brandCSVHeader(title){
+  const b = BRAND;
+  if(!b.show) return "";
+  const q = s => `"${String(s).replace(/"/g,'""')}"`;
+  const rows = [
+    [q(b.firm)],
+    b.person ? [q(b.person + (b.arn ? "  " + (/^arn/i.test(b.arn) ? b.arn : "ARN " + b.arn) : ""))] : null,
+    brandContactLine() ? [q(brandContactLine())] : null,
+    [q(title || "MF Ratings export"), q(new Date().toLocaleString("en-IN"))],
+    [],
+  ].filter(Boolean);
+  return rows.map(r => r.join(",")).join("\n") + "\n";
+}
+
+/* ---------- Setup: edit the details ---------- */
+const BRAND_FIELDS = ["firm","person","arn","phone","email","address"];
+
+function renderBrandPreview(){
+  const b = BRAND;
+  $("#brandpreview").innerHTML = (b.show
+    ? letterheadHTML("Portfolio Review", "")
+    : `<div class="note info">Plain mode — output carries no firm details.
+        Use this for your own working copies.</div>`)
+    + (b.show && !b.arn
+      ? `<p class="tiny warn-txt" style="margin-top:8px">
+           <i class="fa-solid fa-triangle-exclamation"></i>
+           No ARN set. AMFI requires your ARN on anything you hand a client —
+           add it above and it appears on the letterhead and both exports.</p>`
+      : "");
+  $$("#brandshowwrap button").forEach(x =>
+    x.setAttribute("aria-pressed", String((x.dataset.show === "1") === !!b.show)));
+}
+
+function paintBrandFields(){
+  for(const k of BRAND_FIELDS) $("#b-"+k).value = BRAND[k] || "";
+}
+
+function wireBrand(){
+  paintBrandFields();
+  for(const k of BRAND_FIELDS){
+    $("#b-"+k).oninput = e => {
+      BRAND[k] = e.target.value.trim();
+      renderBrandPreview();
+      renderPortfolio();          // a review already on screen re-letterheads live
+    };
+  }
+  $$("#brandshowwrap button").forEach(x => x.onclick = () => {
+    BRAND.show = x.dataset.show === "1"; renderBrandPreview(); renderPortfolio();
+  });
+  $("#brandreset").onclick = () => {
+    brandReset(); paintBrandFields(); renderBrandPreview(); renderPortfolio();
+    setStatus("Details reset to the built-in defaults.", "ok");
+  };
+  renderBrandPreview();
+}
+
+/**
+ * The on-screen review carries its own letterhead; every other view has none.
+ * Rather than duplicate it, print swaps in one #printhead built for whichever
+ * view is on screen, and hides the in-page copy.
+ */
+function paintPrintHead(){
+  // Belt and braces: <details> can hide content from print in some engines even
+  // with CSS, so open every one before printing and let the CSS do the rest.
+  $$("#pfout details").forEach(d=>d.open=true);
+  const pf = !$("#view-pf").classList.contains("hidden");
+  const cat = S.cats[S.active];
+  const title = pf ? "Portfolio Review"
+              : cat ? `${cat.cfg.name} — ${cat.plan} plan ratings`
+              : "MF Ratings";
+  $("#printhead").innerHTML = letterheadHTML(title, pf ? PF.client : "")
+    || `<div class="lh-doc" style="margin-bottom:14px">${esc(title)}</div>`;
+
+  // Running footer — repeats on every printed page, so page 4 still says
+  // whose document it is.
+  const b = BRAND, who = pf && PF.client ? " · " + PF.client : "";
+  const left = b.show
+    ? `${esc(b.firm)}${brandContactLine() ? " · " + esc(brandContactLine()) : ""}`
+    : "MF Ratings";
+  $("#printfoot").innerHTML =
+    `<span>${left}</span><span>${esc(title)}${esc(who)}</span>`;
+}
+
+/** Print just the review. The @media print block strips the app chrome. */
+function printReview(){
+  if(!PF.results.length){ setStatus("Run a review first.","warn"); return; }
+  const name = (PF.client || "").trim();
+  document.title = (BRAND.show ? BRAND.firm + " — " : "")
+                 + "Portfolio Review" + (name ? " — " + name : "");
+  window.print();
+  setTimeout(() => { document.title = "MF Ratings"; }, 800);
+}
+
+/* ===================== BENCHMARK TRI REGISTRY =====================
+   Benchmarks are the actual Total Return Indices, NOT index funds. An index
+   fund's NAV is the index minus its expense ratio and tracking error, which
+   makes it an easier bar than the real benchmark and quietly inflates every
+   fund's alpha and capture ratios against it.
+
+   TRI history is not machine-fetchable: niftyindices.com serves it only
+   through an interactive form with no direct file URL, and would be
+   cross-origin blocked regardless. So it is imported from CSV files that you
+   download once. Several categories share one index, so ~6 files cover
+   all 17 categories.                                                       */
+const INDICES=[
+  {key:"mc502525", name:"NIFTY500 Multicap 50:25:25 TRI", pat:/multicap\s*50\s*:?\s*25\s*:?\s*25|500\s*multicap/},
+  {key:"lm250",    name:"NIFTY LargeMidcap 250 TRI",      pat:/large\s*-?\s*midcap\s*250|largemidcap\s*250/},
+  {key:"mid150",   name:"NIFTY Midcap 150 TRI",           pat:/midcap\s*150/},
+  {key:"small250", name:"NIFTY Smallcap 250 TRI",         pat:/smallcap\s*250/},
+  {key:"nifty100", name:"NIFTY 100 TRI",                  pat:/nifty\s*100(?!\d)/},
+  {key:"n500",     name:"NIFTY 500 TRI",                  pat:/nifty\s*500(?!\d)/},
+  {key:"hyb6535",  name:"NIFTY 50 Hybrid Composite Debt 65:35",  pat:/65\s*:?\s*35/},
+  {key:"hyb5050",  name:"NIFTY 50 Hybrid Composite Debt 50:50",  pat:/50\s*:?\s*50/},
+  {key:"hyb1585",  name:"NIFTY 50 Hybrid Composite Debt 15:85",  pat:/15\s*:?\s*85/},
+  {key:"eqsav",    name:"NIFTY Equity Savings TRI",       pat:/equity\s*savings/},
+  {key:"arb",      name:"NIFTY 50 Arbitrage TRI",         pat:/arbitrage/},
+];
+const IDX_BY_KEY=Object.fromEntries(INDICES.map(i=>[i.key,i]));
+const TRI={};                       // key -> {series, rows, from, to, file, imported}
+
+/* ---------- freshness ----------
+   TRI is imported by hand, so it goes stale silently. These make that visible:
+   scoring a fund against a benchmark that stops three months short is worse
+   than not scoring it at all, because the number still looks authoritative. */
+function triFreshness(){
+  const keys=Object.keys(TRI);
+  if(!keys.length) return {state:"none", days:null, newest:null, count:0};
+  let newest=null;
+  for(const k of keys){ const d=TRI[k].to; if(!newest||d>newest) newest=d; }
+  const days=Math.floor((Date.now()-Date.parse(newest+"T00:00:00Z"))/86400000);
+  const now=new Date(), nd=new Date(newest+"T00:00:00Z");
+  const newMonth = now.getUTCFullYear()*12+now.getUTCMonth() > nd.getUTCFullYear()*12+nd.getUTCMonth();
+  return {state: days>45?"old" : (newMonth||days>31)?"due" : "fresh",
+          days, newest, count:keys.length};
+}
+
+/* ---------- date parsing: niftyindices exports vary by report ---------- */
+const MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseDate(s){
+  s=String(s).trim().replace(/^"|"$/g,"");
+  let m;
+  if((m=s.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{4})$/)))      // 01 Jan 2015 / 01-Jan-2015
+    return Date.UTC(+m[3],MON[m[2].toLowerCase()],+m[1]);
+  if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/)))                            // 2015-01-01
+    return Date.UTC(+m[1],+m[2]-1,+m[3]);
+  if((m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/)))                // 01-01-2015 (day first)
+    return Date.UTC(+m[3],+m[2]-1,+m[1]);
+  if((m=s.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s*(\d{4})$/)))        // Jan 01 2015
+    return Date.UTC(+m[3],MON[m[1].toLowerCase()],+m[2]);
+  return NaN;
+}
+const parseNum=s=>{const v=parseFloat(String(s).replace(/["',\s]/g,""));return Number.isFinite(v)?v:NaN;};
+
+function splitCSV(line){
+  const out=[];let cur="",q=false;
+  for(let i=0;i<line.length;i++){const c=line[i];
+    if(c==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; }
+    else if((c===","||c===";"||c==="\t")&&!q){out.push(cur);cur="";}
+    else cur+=c;}
+  out.push(cur);return out;
+}
+
+/* Column names differ between NSE's TRI report and its index report, so sniff
+   rather than assume: pick the column that parses as dates most often, and the
+   numeric column whose header looks most like a closing/TRI value.          */
+function parseTRI(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<10) throw new Error("file has too few rows to be an index history");
+  const rows=lines.map(splitCSV);
+  const width=Math.max(...rows.slice(0,20).map(r=>r.length));
+  const body=rows.filter(r=>r.length>=Math.min(2,width));
+
+  let dateCol=-1,best=0;
+  for(let c=0;c<width;c++){
+    let hits=0,n=0;
+    for(const r of body.slice(0,200)){ if(r[c]===undefined)continue; n++; if(!isNaN(parseDate(r[c])))hits++; }
+    if(n&&hits/n>0.6&&hits>best){best=hits;dateCol=c;}
+  }
+  if(dateCol<0) throw new Error("no column of recognisable dates found");
+
+  const hdr=(body[0]||[]).map(h=>String(h).toLowerCase());
+
+  // NSE's own export now carries BOTH "Total Returns Index" and "Net Total
+  // Return Index" side by side. They are not interchangeable: the Net series
+  // reinvests dividends AFTER withholding tax, so it runs permanently below
+  // the gross one. Scoring a fund's NAV — which is itself gross of that tax —
+  // against the Net index would understate the benchmark and hand every fund
+  // free alpha. Take the gross column, and only fall back to Net if that is
+  // genuinely all the file has, saying so when it happens.
+  const isNet=h=>/\bnet\b/.test(h);
+  const prefer=[/total\s*return/,/\btri\b/,/clos/,/index\s*value/,/\bvalue\b/,/\bprice\b/];
+  let valCol=-1, usedNet=false;
+  for(const p of prefer){
+    const i=hdr.findIndex((h,c)=>c!==dateCol&&p.test(h)&&!isNet(h));
+    if(i>=0){valCol=i;break;}
+  }
+  if(valCol<0){                                  // gross column absent — is there a Net one?
+    for(const p of prefer){
+      const i=hdr.findIndex((h,c)=>c!==dateCol&&p.test(h));
+      if(i>=0){valCol=i;usedNet=isNet(hdr[i]);break;}
+    }
+  }
+  if(valCol<0){                                  // fall back to the last mostly-numeric column
+    for(let c=width-1;c>=0;c--){
+      if(c===dateCol)continue;
+      let hits=0,n=0;
+      for(const r of body.slice(1,200)){ if(r[c]===undefined)continue; n++; if(!isNaN(parseNum(r[c])))hits++; }
+      if(n&&hits/n>0.8){valCol=c;break;}
+    }
+  }
+  if(valCol<0) throw new Error("no numeric index-value column found");
+
+  const pairs=[];
+  for(const r of body){
+    const t=parseDate(r[dateCol]), v=parseNum(r[valCol]);
+    if(!isNaN(t)&&!isNaN(v)&&v>0) pairs.push([t,v]);
+  }
+  // NSE's export is capped at one calendar year, which is 247-249 trading days
+  // — so the old "250+ rows" rule rejected every single legitimate download.
+  // One file is now just one piece; MIN_TRI_ROWS only screens out files that
+  // are not index history at all, and completeness is judged after merging.
+  if(pairs.length<MIN_TRI_ROWS)
+    throw new Error(`only ${pairs.length} usable rows — too few to be index history`);
+  const s=buildSeries(pairs);
+  if(!s) throw new Error("could not build a continuous series");
+  return {pairs, series:s, rows:pairs.length,
+          column:(body[0]||[])[valCol]!==undefined&&isNaN(parseNum((body[0]||[])[valCol]))
+                 ? String((body[0]||[])[valCol]).trim() : null,
+          usedNet,
+          from:new Date(s.t0).toISOString().slice(0,10),
+          to:new Date(s.t0+(s.n-1)*DAY).toISOString().slice(0,10)};
+}
+
+/* NSE caps each export at one calendar year, so a full history arrives as a
+   pile of yearly files. They have to be MERGED, not replaced — importing
+   eleven files for one index used to leave only the last one. */
+const MIN_TRI_ROWS = 20;
+const MAX_GAP_DAYS = 21;        // longest plausible market closure is ~5 days
+
+function mergePairs(a, b){
+  const m=new Map();
+  for(const [t,v] of a||[]) m.set(t,v);
+  for(const [t,v] of b||[]) m.set(t,v);   // a later file wins on a repeated date
+  return [...m.entries()].sort((x,y)=>x[0]-y[0]);
+}
+
+/* A hole in the middle is worse than missing data: buildSeries forward-fills
+   across it, producing a flat line and then a jump, which silently corrupts
+   volatility, capture ratios and alpha. Keep the most recent unbroken run —
+   every metric is trailing-window anyway — and say what was set aside. */
+function contiguousTail(pairs){
+  if(pairs.length<2) return {kept:pairs, gap:null};
+  let start=0;
+  for(let i=1;i<pairs.length;i++){
+    const gap=Math.round((pairs[i][0]-pairs[i-1][0])/DAY);
+    if(gap>MAX_GAP_DAYS) start=i;
+  }
+  if(!start) return {kept:pairs, gap:null};
+  const iso=t=>new Date(t).toISOString().slice(0,10);
+  return {kept:pairs.slice(start),
+          gap:{from:iso(pairs[start-1][0]), to:iso(pairs[start][0]),
+               dropped:start}};
+}
+
+function buildTRIEntry(key, pairs, files){
+  const {kept, gap}=contiguousTail(pairs);
+  const s=buildSeries(kept);
+  if(!s) throw new Error("could not build a continuous series");
+  return {pairs, series:s, rows:kept.length, files, gap,
+          imported:new Date().toISOString().slice(0,10),
+          file:files.length>1?`${files.length} files`:files[0],
+          from:new Date(s.t0).toISOString().slice(0,10),
+          to:new Date(s.t0+(s.n-1)*DAY).toISOString().slice(0,10)};
+}
+
+function coverageYears(t){
+  return Math.round((t.series.n-1)/365.25*10)/10;
+}
+
+/* guess which index a file holds, from its name and its first rows */
+function detectIndex(fileName,text){
+  // Normalise separators first: exports use "NIFTY 100_TRI_Data.csv" and
+  // "nifty_smallcap_250_tri.csv", where "_" is a WORD character — so \s* never
+  // matches it and \b never fires after a digit followed by "_".
+  const head=(fileName+" "+text.slice(0,3000))
+    .toLowerCase().replace(/[_.]+/g," ").replace(/\s+/g," ");
+  for(const i of INDICES) if(i.pat.test(head)) return i.key;   // ordered: specific before general
+  return null;
+}
+
+/* Files that parse but cannot be identified wait here for manual assignment. */
+const PENDING=[];
+function assignPending(idx,key){
+  const p=PENDING[idx]; if(!p||!key) return false;
+  const prev=TRI[key];
+  const files=[...(prev&&prev.files||[]),p.file];
+  const t=buildTRIEntry(key, mergePairs(prev&&prev.pairs, p.parsed.pairs), files);
+  t.usedNet=(prev&&prev.usedNet)||p.parsed.usedNet;
+  TRI[key]=t;
+  PENDING.splice(idx,1);
+  return true;
+}
+async function importTRIFiles(files){
+  const report=[];
+  for(const f of files){
+    let text;
+    try{ text=await f.text(); }catch(e){ report.push({file:f.name,ok:false,msg:"could not read file"}); continue; }
+    let key=detectIndex(f.name,text);
+    try{
+      const parsed=parseTRI(text);
+      if(!key){ PENDING.push({file:f.name,parsed});
+        report.push({file:f.name,ok:false,msg:"parsed fine ("+parsed.rows.toLocaleString()+" rows) but I could not tell which index it is — pick it below"}); continue; }
+      const prev=TRI[key];
+      const files=[...(prev&&prev.files||[]),f.name];
+      const t=buildTRIEntry(key, mergePairs(prev&&prev.pairs, parsed.pairs), files);
+      t.usedNet=(prev&&prev.usedNet)||parsed.usedNet;
+      TRI[key]=t;
+      const added=t.rows-(prev?prev.rows:0);
+      report.push({file:f.name,ok:true,key,warn:parsed.usedNet||!!t.gap,
+        msg:`${IDX_BY_KEY[key].name} · +${parsed.rows.toLocaleString()} rows`
+          + (files.length>1?` · now ${t.rows.toLocaleString()} rows from ${files.length} files`:"")
+          + ` · ${t.from} to ${t.to} (${coverageYears(t)}y)`
+          + (parsed.column?` · "${parsed.column}" column`:"")
+          + (t.gap?` — GAP between ${t.gap.from} and ${t.gap.to}: ${t.gap.dropped.toLocaleString()} earlier rows set aside until you import the missing years.`:"")
+          + (parsed.usedNet?" — this is the NET index (after dividend tax), so alpha will read low. Prefer the gross Total Returns Index column.":"")});
+    }catch(e){ report.push({file:f.name,ok:false,msg:e.message}); }
+  }
+  return report;
+}
+
+
+/* ---------- TRI bundle: import once, reuse forever ----------
+   Downloading TRI is a manual step that can only happen on your own device.
+   Doing it once per device is tedious, so every imported index can be exported
+   as a single bundle file and re-loaded anywhere — desktop to phone, or after
+   a browser restart. The bundle stores the raw date/value pairs, not a derived
+   summary, so it recomputes identically to the original CSVs. */
+function exportTRIBundle(){
+  const out={format:"mf-ratings-tri-bundle", version:2, indices:{}, brand:brandGet()};
+  for(const [key,t] of Object.entries(TRI)){
+    // Export the merged raw pairs, so a bundle round-trips everything the
+    // files contained — including anything a gap temporarily set aside.
+    const pairs=(t.pairs||[]).map(([ms,v])=>[Math.round(ms/DAY), +v.toFixed(4)]);
+    out.indices[key]={name:IDX_BY_KEY[key].name, file:t.file, rows:pairs.length,
+                      files:t.files||null, d:pairs};
+  }
+  const n=Object.keys(out.indices).length;
+  if(!n) return null;
+  saveBlob(JSON.stringify(out), `mf-ratings-TRI-bundle-${n}-indices.json`);
+  return n;
+}
+async function importTRIBundle(file){
+  const j=JSON.parse(await file.text());
+  if(j.format!=="mf-ratings-tri-bundle") throw new Error("not a TRI bundle file");
+  let n=0;
+  for(const [key,v] of Object.entries(j.indices||{})){
+    if(!IDX_BY_KEY[key]||!Array.isArray(v.d)||v.d.length<MIN_TRI_ROWS) continue;
+    try{
+      const t=buildTRIEntry(key, v.d.map(([day,val])=>[day*DAY,val]),
+                            v.files||[v.file||"bundle"]);
+      t.file=v.file||"bundle";
+      TRI[key]=t;
+    }catch(e){ continue; }
+    n++;
+  }
+  if(!n) throw new Error("bundle contained no usable indices");
+  // v2 bundles also carry the distributor details, so one file restores both.
+  if(j.brand && typeof j.brand==="object"){
+    brandSet(j.brand);
+    if(typeof paintBrandFields==="function"){ paintBrandFields(); renderBrandPreview(); }
+  }
+  return n;
+}
+
+/* ---------- the update button ----------
+   NSE's TRI endpoint needs an X-Requested-With header (triggers a CORS
+   preflight it does not answer) and a Referer (a header browsers forbid
+   scripts from setting), and returns no Access-Control-Allow-Origin. So a
+   browser CANNOT fetch it — not "usually fails", cannot.
+
+   Rather than ship a button that quietly does nothing, this tries for real,
+   reports what actually happened, and then hands over the two routes that do
+   work. The auto-fetcher writes the bundle directly, so a monthly refresh is
+   a double-click plus one Load bundle. */
+async function attemptTRIFetch(onLine){
+  const URL_="https://www.niftyindices.com/BackPage/getTotalReturnIndexString";
+  onLine("Trying niftyindices.com directly…");
+  const ac=new AbortController(); const t=setTimeout(()=>ac.abort(),4000);
+  let reason;
+  try{
+    const r=await fetch(URL_,{method:"POST",signal:ac.signal,
+      headers:{"Content-Type":"application/json; charset=UTF-8"},
+      body:JSON.stringify({cinfo:"{'name':'NIFTY 100','startDate':'01-Jan-2010','endDate':'01-Jan-2011','indexName':'NIFTY 100'}"})});
+    clearTimeout(t);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    return {ok:true, note:"unexpectedly succeeded — "+(j&&j.d?"payload received":"empty payload")};
+  }catch(e){
+    clearTimeout(t);
+    reason = e.name==="AbortError" ? "timed out" : (e.message||String(e));
+    // distinguish "blocked before leaving the page" from "server said no"
+    try{ await fetch(URL_,{method:"POST",mode:"no-cors",body:"{}"});
+         return {ok:false, reason, detail:"The request reached NSE, but the response carried no CORS header so the browser discarded it unread."}; }
+    catch(e2){ return {ok:false, reason, detail:"The request never left the page — the custom headers NSE requires trigger a CORS preflight it does not answer."}; }
+  }
+}
+
+/* ===================== CONFIG ===================== */
+const API="https://api.mfapi.in", CONC=6, FETCH_TIMEOUT=2000;
+let MAX_FUNDS=75;   // adjustable: 146 Large Cap candidates exist, 75 truncated them
+let ROLL_SPAN=10;   // years of rolling-return history, Advisorkhoj convention
+/* Minimum years since launch for a fund to count as fully comparable. Below
+   this the risk metrics exist but have not been through enough market
+   conditions to mean much, and the fund sits below the line in the table. */
+let MIN_TENURE=10;
+
+const CATEGORIES=[
+ /* ---------------- EQUITY ---------------- */
+ {id:"largecap", name:"Large Cap", grp:"Equity", rule:"Min 80% in large-cap stocks",
+  tri:"nifty100",
+  find:/\blarge\s*cap\b|blue\s*-?\s*chip|\btop\s*100\b/, findNot:/large\s*(&|and)\s*mid|largemid/,
+  match:c=>/large cap/.test(c)&&!/large & mid|large and mid/.test(c)},
+
+ {id:"largemid", name:"Large & Mid Cap", grp:"Equity", rule:"Min 35% large-cap AND min 35% mid-cap",
+  tri:"lm250",
+  find:/large\s*(&|and)\s*mid\s*cap|large\s*(&|and)\s*midcap|largemidcap|emerging\s*equit|equity\s*opportunit|core\s*equity/,
+  match:c=>/large & mid|large and mid/.test(c)},
+
+ {id:"midcap", name:"Mid Cap", grp:"Equity", rule:"Min 65% in mid-cap stocks",
+  tri:"mid150",
+  find:/\bmid\s*cap\b|\bmidcap\b/, findNot:/large\s*(&|and)\s*mid\s*cap|large\s*(&|and)\s*midcap|largemidcap|midcap\s*150/,
+  match:c=>/mid cap|midcap/.test(c)&&!/large & mid|large and mid/.test(c)},
+
+ {id:"smallcap", name:"Small Cap", grp:"Equity", rule:"Min 65% in small-cap stocks",
+  tri:"small250",
+  find:/\bsmall\s*cap\b|\bsmallcap\b/, findNot:/smallcap\s*250|smallcap\s*50\b/,
+  match:c=>/small cap|smallcap/.test(c)},
+
+ {id:"flexicap", name:"Flexi Cap", grp:"Equity", rule:"Min 65% equity, dynamic across market caps",
+  tri:"n500",
+  find:/flexi\s*cap|flexicap/, match:c=>/flexi/.test(c)},
+
+ {id:"multicap", name:"Multi Cap", grp:"Equity", rule:"Min 25% each in large, mid and small cap",
+  tri:"mc502525",
+  find:/multi\s*cap|multicap/, findNot:/flexi|50\s*:?\s*25/,
+  match:c=>/multi cap|multicap/.test(c)&&!/flexi/.test(c)},
+
+ {id:"elss", name:"ELSS (Tax Saver)", grp:"Equity", rule:"Min 80% equity, 3-year statutory lock-in",
+  tri:"n500",
+  find:/\belss\b|tax\s*saver|tax\s*advantage|tax\s*relief|tax\s*shield|long\s*term\s*equity|tax\s*plan/,
+  match:c=>/elss|tax\s*sav/.test(c)},
+
+ {id:"value", name:"Value", grp:"Equity", rule:"Min 65% equity, value investment strategy",
+  tri:"n500",
+  find:/\bvalue\b/, findNot:/value\s*discovery\s*etf|nifty\s*500\s*value/,
+  match:c=>/value/.test(c)&&!/contra/.test(c)},
+
+ {id:"contra", name:"Contra", grp:"Equity", rule:"Min 65% equity, contrarian strategy (an AMC may run Value OR Contra, not both)",
+  tri:"n500",
+  find:/contra\b/, match:c=>/contra/.test(c)},
+
+ {id:"focused", name:"Focused", grp:"Equity", rule:"Min 65% equity, maximum 30 stocks",
+  tri:"n500",
+  find:/focus/, match:c=>/focus/.test(c)},
+
+ {id:"divyield", name:"Dividend Yield", grp:"Equity", rule:"Min 65% equity, predominantly dividend-yielding stocks",
+  tri:"n500",
+  find:/dividend\s*yield/, match:c=>/dividend\s*yield/.test(c)},
+
+ /* ---------------- HYBRID ---------------- */
+ {id:"aggrhybrid", name:"Aggressive Hybrid", grp:"Hybrid", rule:"65-80% equity, 20-35% debt",
+  tri:"hyb6535",
+  find:/aggressive\s*hybrid|equity\s*hybrid|balanced\s*fund|\bbalanced\b/, findNot:/balanced\s*advantage/,
+  match:c=>/aggressive hybrid/.test(c)},
+
+ {id:"baf", name:"Balanced Advantage", grp:"Hybrid", rule:"Dynamic equity/debt allocation, 0-100% either way",
+  tri:"hyb5050",
+  find:/balanced\s*advantage|dynamic\s*asset|\bbaf\b|\bdaaf\b/,
+  match:c=>/dynamic asset|balanced advantage/.test(c)},
+
+ {id:"conshybrid", name:"Conservative Hybrid", grp:"Hybrid", rule:"10-25% equity, 75-90% debt",
+  tri:"hyb1585",
+  find:/conservative\s*hybrid|regular\s*savings|monthly\s*income|income\s*plus|debt\s*hybrid/,
+  match:c=>/conservative hybrid/.test(c)},
+
+ {id:"multiasset", name:"Multi Asset Allocation", grp:"Hybrid", rule:"Minimum 10% in each of at least 3 asset classes",
+  tri:"hyb6535", triApprox:true,
+  find:/multi\s*asset/, match:c=>/multi asset/.test(c)},
+
+ {id:"equitysav", name:"Equity Savings", grp:"Hybrid", rule:"Min 65% equity, min 10% debt, arbitrage balance",
+  tri:"eqsav",
+  find:/equity\s*savings/, match:c=>/equity savings/.test(c)},
+
+ {id:"arbitrage", name:"Arbitrage", grp:"Hybrid", rule:"Min 65% equity, arbitrage strategy",
+  tri:"arb",
+  find:/arbitrage/, match:c=>/arbitrage/.test(c)},
+];
+
+/* mfapi's /mf/search is hard-capped at ~15 results regardless of the query
+   ("hdfc" returns 15; "flexi cap" yields only 3 Direct-Growth funds), which is
+   far too few to average a category over. The full scheme list is paginated
+   through /mf?limit&offset instead, cached once, and filtered locally.       */
+let UNIVERSE=null, UNIVERSE_PLAN_DIRTY=false;
+async function loadUniverse(onTick){
+  if(UNIVERSE) return UNIVERSE;
+  const PAGE=20000, all=[];
+  for(let off=0,guard=0; guard<25; guard++, off+=PAGE){
+    const page=await jget(`${API}/mf?limit=${PAGE}&offset=${off}`);
+    if(!Array.isArray(page)||!page.length) break;
+    all.push(...page);
+    onTick&&onTick(all.length);
+    if(page.length<PAGE) break;
+  }
+  if(!all.length) throw new Error("AMFI scheme list came back empty");
+  UNIVERSE=all;
+  return all;
+}
+/* Plenty of equity funds never state their category in the name — "Kotak
+   Emerging Equity" is a Mid Cap, "Canara Robeco Emerging Equities" is a Large &
+   Mid Cap. Name patterns alone silently drop them. These generic equity names
+   are therefore added to EVERY category's candidate pool; the scheme's own SEBI
+   category (checked after fetch) is what actually decides, so over-matching only
+   costs a fetch. They are appended after the confident matches so that if the
+   MAX_FUNDS cap bites, it trims the speculative ones first.                  */
+const AMBIGUOUS=/emerging\s*equit|emerging\s*business|equity\s*opportunit|core\s*equity|growth\s*opportunit|opportunities\s*fund|\bprime\s*fund|equity\s*advantage/;
+
+function pickUniverse(cfg){
+  const primary=[], maybe=[];
+  for(const s of UNIVERSE){
+    const n=s.schemeName; if(!n||!isDG(n)) continue;
+    const low=n.toLowerCase();
+    if(cfg.findNot&&cfg.findNot.test(low)) continue;
+    if(cfg.find.test(low)) primary.push({code:s.schemeCode,name:n});
+    else if(AMBIGUOUS.test(low)) maybe.push({code:s.schemeCode,name:n});
+  }
+  return primary.concat(maybe);
+}
+/* pickBenchmark() removed: index funds are no longer used as benchmarks.
+   The benchmark now comes from an imported TRI file via TRI[cfg.tri]. */
+
+
+/* Distributors sell REGULAR plans, so that is the default. A "Regular" plan is
+   identified by the ABSENCE of "direct" rather than the presence of the word —
+   many AMFI names omit the plan entirely (e.g. "HDFC Flexi Cap Fund - Growth"),
+   and those are regular plans. */
+let PLAN="regular";
+/* "Dividend" appears in TWO unrelated senses: the payout OPTION (reject) and
+   the Dividend Yield CATEGORY (keep). Blanket-rejecting the word wiped out
+   every Dividend Yield fund — "UTI Dividend Yield Fund - Regular Plan - Growth"
+   is a growth-option scheme. Strip the category phrase first, then test the
+   remainder for option markers. */
+const isGrowth=s=>{
+  if(!s.includes("growth")) return false;
+  const opt=s.replace(/dividend\s*yield/g,"");
+  return !/idcw|dividend|payout|reinvest|bonus|segregated|quarterly|half.?yearly|weekly|daily/.test(opt);
+};
+const isPlan=n=>{
+  const s=n.toLowerCase();
+  if(!isGrowth(s)) return false;
+  const direct=/\bdirect\b/.test(s);
+  return PLAN==="direct" ? direct : !direct;
+};
+const isDG=isPlan;
+const isIdx=n=>/index|nifty|sensex|bse/i.test(n);
+
+/* ===================== EXTERNAL ROLLING-RETURN FETCH =====================
+   Spec requires live attempts against Advisorkhoj / Morningstar / Value
+   Research. All three are same-origin-only: no Access-Control-Allow-Origin
+   header, so the browser discards the response before JS can read it. These
+   calls are wired up as specified and WILL throw; the catch drives the modal,
+   which is the real data path. Short timeout so we fail fast per fund.      */
+const SOURCES=[
+ {name:"Advisorkhoj",    url:f=>`https://www.advisorkhoj.com/mutual-funds-research/rolling-returns?fund=${encodeURIComponent(f)}`},
+ {name:"Value Research", url:f=>`https://www.valueresearchonline.com/funds/search/?q=${encodeURIComponent(f)}`},
+ {name:"Morningstar",    url:f=>`https://www.morningstar.in/search.aspx?q=${encodeURIComponent(f)}`},
+];
+async function fetchRollingExternal(fundName){
+  const tried=[];
+  for(const s of SOURCES){
+    const ac=new AbortController(); const t=setTimeout(()=>ac.abort(),FETCH_TIMEOUT);
+    try{
+      const r=await fetch(s.url(fundName),{signal:ac.signal,mode:"cors"});
+      clearTimeout(t);
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const txt=await r.text();
+      const m=txt.match(/rolling[^0-9%]{0,80}?(-?\d{1,2}\.\d{1,2})\s*%/i);
+      if(!m) throw new Error("no parsable rolling-return figure");
+      return {value:parseFloat(m[1]), source:s.name};
+    }catch(e){ clearTimeout(t); tried.push(`${s.name}: ${e.name==="AbortError"?"timeout":e.message}`); }
+  }
+  throw new Error(tried.join(" · "));
+}
+
+/* ===================== ASYNC MODAL QUEUE ===================== */
+const Q={ resolve:null, applyAll:null, csv:new Map(), mode:"nav", ctxProxy:null };
+function normName(s){ return s.toLowerCase()
+  .replace(/\b(direct|regular|plan|growth|option|fund|scheme|idcw|payout|reinvestment)\b/g,"")
+  .replace(/[^a-z0-9]/g,""); }
+function csvLookup(name){
+  const k=normName(name);
+  if(Q.csv.has(k)) return Q.csv.get(k);
+  for(const [ck,v] of Q.csv) if(k.includes(ck)||ck.includes(k)) return v;
+  return null;
+}
+/** Never blocks the event loop: returns a Promise the modal resolves. */
+function askUser(ctx){
+  return new Promise(res=>{
+    Q.resolve=v=>{ Q.resolve=null; hideModal(); res(v); };
+    showModal(ctx);
+  });
+}
+/* Default mode is "nav": rolling return is computed from the same free AMFI
+   NAV history as everything else, so a run needs no input at all. Switch the
+   header toggle to "external" to attempt Advisorkhoj / Value Research /
+   Morningstar first and fall back to the modal, per the original spec.
+   A CSV import always wins in either mode.                                  */
+async function resolveRolling(fund, idx, total, proxy){
+  const hit=csvLookup(fund.name);
+  if(hit!=null) return {value:hit, source:"CSV import"};
+
+  if(Q.mode==="nav")
+    return proxy?{value:proxy.value, source:"Computed from NAV"}:null;
+
+  if(Q.applyAll==="proxy") return proxy?{value:proxy.value,source:"Computed from NAV"}:null;
+  if(Q.applyAll==="skip")  return null;
+  let err="";
+  try{ return await fetchRollingExternal(fund.name); }
+  catch(e){ err=e.message; }
+  return await askUser({fund, idx, total, proxy, err});
+}
+
+/* ===================== FETCH / PIPELINE ===================== */
+const S={ cats:{}, active:CATEGORIES[0].id, running:false };
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+async function jget(u){ const r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+async function loadNav(code){
+  const j=await jget(`${API}/mf/${code}`); const d=j&&j.data;
+  if(!d||d.length<200) return null;
+  const pairs=d.map(x=>{const [dd,mm,yy]=x.date.split("-").map(Number);
+    return [Date.UTC(yy,mm-1,dd), parseFloat(x.nav)];}).filter(p=>Number.isFinite(p[1])&&p[1]>0);
+  const s=buildSeries(pairs); return s?{series:s, meta:j.meta||{}}:null;
+}
+async function pool(items,fn,tick){
+  const out=new Array(items.length); let i=0,done=0;
+  await Promise.all(Array.from({length:Math.min(CONC,items.length)},async()=>{
+    while(i<items.length){const k=i++;
+      try{ out[k]=await fn(items[k]); }catch(e){ out[k]=null; }
+      tick&&tick(++done,items.length);}
+  }));
+  return out;
+}
+const setStatus=(t,kind="")=>{ const e=$("#status"); if(!e) return; e.textContent=t;
+  e.className="small "+(kind==="ok"?"":kind==="bad"?"":kind==="warn"?"":"muted");
+  e.style.color = kind==="ok"?"var(--ok)":kind==="bad"?"var(--bad)":kind==="warn"?"var(--warn)":"";
+};
+const setProg=p=>{const e=$("#progbar"); if(e) e.style.width=(p*100).toFixed(1)+"%";};
+
+/* silent = called by the portfolio review, which loads categories in the
+   background. Without it the screen jumps to the Rate view mid-review. */
+async function runCategory(cfg,{silent=false}={}){
+  if(S.running) return;
+  if(!silent){ S.active=cfg.id; showRate("run"); }
+  S.running=true; Q.applyAll=null;
+  $$(".cat-tab").forEach(b=>b.disabled=true);
+  $("#runbtn").disabled=true;
+  try{
+    /* full scheme universe — one paginated download, cached for the session */
+    setStatus("Downloading AMFI scheme list…"); setProg(.02);
+    await loadUniverse(n=>setStatus(`Downloading AMFI scheme list — ${n.toLocaleString()} schemes…`));
+    setProg(.06);
+
+    /* benchmark = the real Total Return Index, imported from CSV */
+    const tri=TRI[cfg.tri];
+    let bench=null, benchName=null, benchProxy=null, benchShort=null;
+    if(tri){ bench=tri.series; benchName=IDX_BY_KEY[cfg.tri].name; }
+    setProg(.10);
+
+    /* candidates by name, confirmed later against each scheme's SEBI category */
+    let cand=pickUniverse(cfg);
+    const scanned=cand.length, capped=scanned>MAX_FUNDS;
+    if(capped) cand=cand.slice(0,MAX_FUNDS);
+    if(!cand.length) throw new Error(
+      `no Direct-Growth scheme names matched this category among ${UNIVERSE.length.toLocaleString()} AMFI schemes`);
+    setStatus(`Fetching NAV history — 0/${cand.length}`);
+
+    const got=await pool(cand, async c=>{
+      const n=await loadNav(c.code); return n?{...c,...n}:null;
+    }, (d,t)=>{ setProg(.10+.53*d/t); setStatus(`Fetching NAV history — ${d}/${t}`); });
+
+    /* NAV-derived metrics + category filter */
+    const rows=[];
+    for(const g of got){
+      if(!g) continue;
+      if(!cfg.match((g.meta.scheme_category||"").toLowerCase())) continue;
+      rows.push({ code:g.code, name:g.name.replace(/\s+/g," ").trim(),
+                  amc:g.meta.fund_house||"", ageYears:(g.series.n-1)/365.25,
+                  proxy:rollingProxy(g.series,3,ROLL_SPAN),
+                  m:navMetrics(g.series,bench) });
+    }
+    if(!rows.length) throw new Error(`${cand.length} schemes matched by name but none carry this SEBI category in the AMFI data`);
+
+    /* rolling returns — external, then modal */
+    setStatus(`Resolving 3Y rolling returns — 0/${rows.length}`);
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      const res=await resolveRolling(r,i+1,rows.length,r.proxy);
+      r.m.rolling = res?res.value:null;
+      r.rollSrc  = res?res.source:null;
+      setProg(.63+.32*(i+1)/rows.length);
+      setStatus(`Resolving 3Y rolling returns — ${i+1}/${rows.length}`);
+    }
+
+    /* benchmark row */
+    let bmM=null;
+    if(bench){
+      bmM=navMetrics(bench,bench);
+      // The benchmark's rolling return uses the SAME function as every fund,
+      // just applied to the TRI series instead of a NAV series — same windows,
+      // same trading-day rule, same span. Keeping the full proxy (not only the
+      // mean) makes the benchmark's windows inspectable and downloadable too.
+      benchProxy=rollingProxy(bench,3,ROLL_SPAN);
+      const bhit=csvLookup(benchName||"");
+      bmM.rolling = bhit!=null?bhit:(benchProxy?benchProxy.value:null);
+      bmM._rollSrc = bhit!=null?"CSV import":"Computed from TRI";
+      // A TRI file shorter than the span leaves the benchmark without a rolling
+      // figure, which silently drops that parameter for every fund in the
+      // category. Surface it rather than let it vanish.
+      benchShort = !benchProxy ? Math.round((bench.n-1)/365.25*10)/10 : null;
+    }
+    const catAvg=categoryAverage(rows);
+    const maxParams = bench ? PARAMS.length
+                            : PARAMS.filter(p=>p.src==="AMFI NAV").length;
+    for(const r of rows){
+      r.s=scoreFund(r.m,bmM,catAvg);
+      // "Complete" = every parameter this run can actually produce. Without a
+      // benchmark TRI, alpha and both capture ratios are unavailable to EVERY
+      // fund — measuring against 7 there would push the entire table below the
+      // line and rank nothing at all.
+      r.complete = r.s.n===maxParams;
+      r.tenured  = r.ageYears>=MIN_TENURE;
+      r.qualified= r.complete && r.tenured && r.s.pct!=null;
+    }
+
+    // Rank within the qualified set only. A three-year-old fund scored on four
+    // parameters should not hold rank 1 over a decade-old fund scored on seven.
+    const ranked=rows.filter(r=>r.qualified).sort((a,b)=>b.s.pct-a.s.pct||(b.s.total-a.s.total));
+    ranked.forEach((r,i)=>{ r.rank=(i>0&&Math.abs(ranked[i-1].s.pct-r.s.pct)<1e-12)?ranked[i-1].rank:i+1; });
+    // Qualified funds first, in score order; everything else below the line.
+    rows.sort((a,b)=>
+      (b.qualified?1:0)-(a.qualified?1:0)
+      || (a.s.pct==null)-(b.s.pct==null)
+      || (b.s.pct??-1)-(a.s.pct??-1));
+    const nQual=rows.filter(r=>r.qualified).length;
+
+    S.cats[cfg.id]={cfg,rows,catAvg,bmM,benchName,benchProxy,benchShort,bench:!!bench,plan:PLAN,scanned,loaded:cand.length,capped,
+                    nQual, maxParams, tenure:MIN_TENURE, metricMode:METRIC_MODE, span:ROLL_SPAN,
+                    at:new Date().toLocaleString()};
+    setProg(1); setStatus(`${cfg.name}: ${nQual} of ${rows.length} funds fully comparable.`,"ok");
+  }catch(e){
+    const net=/failed to fetch|networkerror|load failed/i.test(e.message);
+    setStatus(net
+      ? `${cfg.name} failed — cannot reach api.mfapi.in. Check your connection, or an extension/firewall is blocking it.`
+      : `${cfg.name} failed — ${e.message}`, "bad");
+  }finally{
+    S.running=false; $$(".cat-tab").forEach(b=>b.disabled=false); $("#runbtn").disabled=false; render();
+  }
+}
+
+/* Rendering. Markup is deliberately class-light — a small vocabulary of
+   semantic classes rather than a utility class on every element. */
+function saveBlob(text,filename){
+  // Excel on Windows assumes the ANSI codepage unless a CSV opens with a UTF-8
+  // BOM, which mangles the em dash and middot in the letterhead block. JSON
+  // must NOT get one — JSON.parse rejects a leading BOM.
+  const csv=/\.csv$/i.test(filename);
+  const body=csv?["\uFEFF",text]:[text];
+  const url=URL.createObjectURL(new Blob(body,
+    {type:csv?"text/csv;charset=utf-8":"application/json;charset=utf-8"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; a.style.display="none";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },5000);
+}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=(v,u)=>v==null?'<span class="rag n">—</span>':(u==="%"?v.toFixed(2)+"%":v.toFixed(2));
+const RAGT=["beats neither","beats one","beats both"];
+
+function ragBadge(p,per=2){
+  if(p==null) return '<span class="rag n">—</span>';
+  const cls = per===2 ? ["r","a","g"][p] : (p?"g":"r");
+  const t   = per===2 ? RAGT[p] : (p?"beats category average":"below category average");
+  return `<span class="rag ${cls}" title="${t}">${p}</span>`;
+}
+function verdictBadge(pct){
+  if(pct==null) return '<span class="rag n">—</span>';
+  const [c,t]= pct>=.75?["g","Buy / Core"] : pct>=.5?["a","Hold"] : ["r","Review"];
+  return `<span class="verdict ${c}">${t}</span>`;
+}
+const srcPill=s=>!s?"":`<span class="pill">${esc(s)}</span>`;
+
+/* ---------- category picker (one choice at a time) ---------- */
+function renderTabs(){
+  const grp={};
+  for(const c of CATEGORIES) (grp[c.grp]=grp[c.grp]||[]).push(c);
+  $("#tabs").innerHTML=Object.entries(grp).map(([g,list])=>`
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">${g}${g==="Equity"
+        ?' · <span style="font-weight:400;text-transform:none;letter-spacing:0">★ is the core offering (Large or Flexi + Mid + Small)</span>':""}</div>
+      <div class="choices">${list.map(c=>{
+        const core=CORE_CATEGORIES.includes(c.id), n=S.cats[c.id]?.rows.length;
+        return `<button class="cat-tab choice" data-id="${c.id}">
+          <span class="ic">${core?'<i class="fa-solid fa-star"></i>':'<i class="fa-regular fa-circle"></i>'}</span>
+          <span style="flex:1"><b>${c.name}</b><span>${esc(c.rule)}</span></span>
+          ${n!=null?`<span class="pill on">${n} scored</span>`:""}
+          <span class="go"><i class="fa-solid fa-chevron-right"></i></span></button>`;}).join("")}</div>
+    </div>`).join("");
+  $$(".cat-tab").forEach(b=>b.onclick=()=>{ S.active=b.dataset.id; showRate("run"); render(); });
+}
+
+function render(){
+  const cfg=CATEGORIES.find(c=>c.id===S.active)||CATEGORIES[0];
+  const d=S.cats[S.active];
+  renderTabs();
+  if($("#rate-title")) $("#rate-title").textContent=cfg.name;
+  $("#catrule").innerHTML=`${esc(cfg.rule)} · Benchmark: <b>${esc(IDX_BY_KEY[cfg.tri].name)}</b> ${
+    TRI[cfg.tri]?'<span style="color:var(--ok)">imported</span>':'<span style="color:var(--warn)">not imported</span>'}`;
+  $("#runbtn").innerHTML=`<i class="fa-solid fa-play"></i>${d?"Re-run":"Load & score"}`;
+  $("#exportbtn").disabled=!d;
+
+  if(!d){ $("#cards").innerHTML=""; $("#tablewrap").innerHTML=
+    `<div class="note info" style="text-align:center;padding:34px">Nothing loaded yet — press <b>Load &amp; score</b>.</div>`; return; }
+
+  const scored=d.rows.filter(r=>r.s.pct!=null);
+  const qual=d.rows.filter(r=>r.qualified);
+  $("#cards").innerHTML=[
+   ["Fully comparable",qual.length,`${d.tenure}y+ and all ${d.maxParams} parameters`],
+   ["Buy / Core",qual.filter(r=>r.s.pct>=.75).length,"score ≥ 75%, qualified only"],
+   ["Top score",qual.length?`${qual[0].s.total}/${qual[0].s.max}`:"—",
+     qual.length?esc(qual[0].name.split(" - ")[0]).slice(0,24):"none qualify"],
+   ["Below the line",d.rows.length-qual.length,"too new or incomplete"],
+  ].map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("");
+
+  const th=PARAMS.map(p=>`<th title="${p.label} · ${p.src}">${p.short}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">${p.dir===1?"higher":"lower"}</span></th>`).join("");
+  const cmp=(label,o,tag,which)=>o?`<tr class="cmp"><td>${label}</td>
+      ${PARAMS.map(p=>{const c=p.key==="rolling"&&which==="bench"&&d.benchProxy;
+        return `<td class="num"${c?` data-roll="__bench__" style="cursor:pointer" title="See all ${d.benchProxy.obs.toLocaleString()} windows"`:""}>${
+          num(o[p.key],p.unit)}${c?' <i class="fa-solid fa-table-list" style="font-size:9px;color:var(--acc)"></i>':""}</td>`;}).join("")}
+      <td colspan="4" class="small muted">${tag}</td></tr>`:"";
+
+  $("#tablewrap").innerHTML=`
+  <p class="small muted" style="margin-bottom:10px">${d.bench
+    ? `Scored against <b>${esc(d.benchName)}</b> and the category average — 2 points per parameter, max ${PARAMS.length*2}.`
+    : `<b style="color:var(--warn)">${esc(IDX_BY_KEY[d.cfg.tri].name)} not imported.</b> Alpha and the capture ratios need it, so they stay blank and scoring falls back to the category average alone (max ${PARAMS.length}).`}
+    Plan: <b>${d.plan==="direct"?"Direct":"Regular"}</b>.
+    ${d.metricMode==="rolling"
+      ? `Alpha, Sortino, both capture ratios and standard deviation are the <b>average across every rolling 3-year window in the last ${d.span} years</b>, not a single trailing reading. 3Y CAGR stays trailing so it still shows recent performance. <b>${d.nQual} of ${d.rows.length}</b> funds are ${d.tenure}y+ with all ${d.maxParams} parameters and are ranked; the rest sit below the line.`
+      : `Metrics are single trailing 3-year readings.`}${d.benchShort?` <span style="color:var(--warn)">Benchmark TRI covers only ${d.benchShort} years, shorter than the ${ROLL_SPAN}-year span, so the rolling parameter is skipped.</span>`:""}
+    ${d.capped?` <span style="color:var(--warn)">Showing ${d.loaded} of ${d.scanned} candidates — raise the limit in Options.</span>`:""}</p>
+  <div class="tbl-wrap" style="max-height:65vh">
+  <table><thead><tr><th>Fund</th>${th}<th>Score</th><th>#</th><th>Rank</th><th>Verdict</th></tr></thead><tbody>
+    ${cmp(`<i class="fa-solid fa-flag-checkered" style="color:var(--acc)"></i> Benchmark — ${esc(d.benchName||"none")}`,d.bmM,"benchmark"+(d.bmM?srcPill(d.bmM._rollSrc):""),"bench")}
+    ${cmp(`<i class="fa-solid fa-layer-group" style="color:var(--ink3)"></i> Category average <span class="muted" style="font-weight:400">(${d.catAvg._n} of ${d.rows.length})</span>`,d.catAvg,"category average")}
+    ${d.rows.map((r,ri)=>`${
+      (!r.qualified && (ri===0 || d.rows[ri-1].qualified))
+        ? `<tr class="cmp"><td colspan="${PARAMS.length+5}" class="small"
+             style="color:var(--warn);text-align:left;font-weight:600">
+             <i class="fa-solid fa-arrow-turn-down"></i>
+             Below the line — not directly comparable with the funds above.
+             <span style="font-weight:400" class="muted">Under ${d.tenure} years since launch, or missing at least one parameter. Shown for completeness; they are not ranked.</span>
+           </td></tr>` : ""}<tr${r.qualified?"":' style="opacity:.62"'}>
+      <td><div style="font-weight:550">${esc(r.name)}</div>
+        <div class="tiny muted">${esc(r.amc)} ${srcPill(r.rollSrc)}
+          <span class="pill">${r.ageYears.toFixed(1)}y</span>${
+          !r.tenured?`<span class="pill" style="color:var(--warn)">under ${d.tenure}y</span>`:""}${
+          r.s.n<d.maxParams&&r.s.n>0?`<span class="pill" style="color:var(--warn)">${d.maxParams-r.s.n} n/a</span>`:""}${
+          r.m._mode==="trailing-fallback"?'<span class="pill" style="color:var(--warn)">3Y only</span>':""}${
+          r.m._mode==="rolling-partial"?`<span class="pill" style="color:var(--warn)">${r.m._spanUsed}y of ${d.span}y</span>`:""}</div></td>
+      ${PARAMS.map((p,i)=>{const c=p.key==="rolling"&&r.proxy;
+        const rollAvg = r.m._mode==="rolling" && p.key!=="cagr3y" && p.key!=="rolling";
+        const tip = c ? `See all ${r.proxy.obs.toLocaleString()} windows`
+                  : rollAvg ? `Average of ${(r.m._counts&&r.m._counts[p.key])||r.m._windows} rolling 3-year windows, ${r.m._mFrom} to ${r.m._mTo}`
+                  : `Trailing 3 years`;
+        return `<td class="num" title="${esc(tip)}"${c?` data-roll="${r.code}" style="cursor:pointer"`:""}>
+          <div>${num(r.m[p.key],p.unit)}${c?' <i class="fa-solid fa-table-list" style="font-size:9px;color:var(--acc)"></i>':""}</div>
+          <div style="margin-top:2px">${ragBadge(r.s.pts[i],r.s.per)}</div></td>`;}).join("")}
+      <td class="num" style="font-weight:650">${r.s.total??"—"}<span class="muted" style="font-weight:400">/${r.s.max||PARAMS.length*r.s.per}</span></td>
+      <td class="num muted">${r.s.n||"—"}</td>
+      <td class="num" style="font-weight:650">${r.rank??"—"}</td>
+      <td>${verdictBadge(r.s.pct)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="row small muted" style="margin-top:10px">
+    ${(d.bench?[2,1,0]:[1,0]).map(p=>`<span>${ragBadge(p,d.bench?2:1)} ${d.bench?RAGT[p]:(p?"beats category average":"below")}</span>`).join("")}
+    <span>— not enough history, skipped</span><span style="margin-left:auto">${d.at}</span></div>`;
+}
+
+/* ---------- benchmark panel ---------- */
+function renderTRI(report){
+  const need={};
+  for(const c of CATEGORIES) (need[c.tri]=need[c.tri]||[]).push(c.name);
+  const have=INDICES.filter(i=>TRI[i.key]).length, want=new Set(CATEGORIES.map(c=>c.tri)).size;
+  $("#trisummary").innerHTML=`<b>${have} of ${want}</b> imported`;
+  $("#tritable").innerHTML=`<div class="tbl-wrap"><table><tbody>${
+    INDICES.filter(i=>need[i.key]).map(i=>{const t=TRI[i.key];
+      return `<tr><td style="width:20px">${t?'<i class="fa-solid fa-circle-check" style="color:var(--ok)"></i>'
+        :'<i class="fa-regular fa-circle" style="color:var(--ink3)"></i>'}</td>
+      <td style="font-weight:550">${esc(i.name)}</td>
+      <td class="small muted" style="text-align:left">${t?`${t.rows.toLocaleString()} rows · ${t.from} → ${t.to}`
+          +(t.files&&t.files.length>1?` · <span class="tiny">merged from ${t.files.length} files</span>`:"")
+          +(t.gap?` · <span style="color:var(--warn)">gap before ${t.gap.to}</span>`:"")
+          +(t.usedNet?' · <span style="color:var(--warn)">NET index</span>':"")
+        :'<span style="color:var(--warn)">not imported</span>'}</td>
+      <td class="tiny muted" style="text-align:left">${need[i.key].length} categor${need[i.key].length>1?"ies":"y"}</td></tr>`;}).join("")
+  }</tbody></table></div>`;
+  $("#tripending").innerHTML=!PENDING.length?"":
+    `<div class="note warn" style="margin-top:10px"><b>Which index is this?</b>
+      ${PENDING.map((p,i)=>`<div class="row" style="margin-top:6px">
+        <span class="tiny" style="flex:1">${esc(p.file)} <span class="muted">(${p.parsed.rows.toLocaleString()} rows)</span></span>
+        <select data-pending="${i}" style="width:auto"><option value="">choose…</option>
+          ${INDICES.map(x=>`<option value="${x.key}">${esc(x.name)}</option>`).join("")}</select></div>`).join("")}</div>`;
+  $$("#tripending select").forEach(sel=>sel.onchange=()=>{
+    if(assignPending(+sel.dataset.pending,sel.value)){ renderTRI(null); renderBanner(); render(); }});
+  $("#trireport").innerHTML=!report?"":report.map(x=>
+    `<div style="color:var(--${x.warn?"warn":x.ok?"ok":"bad"})"><b>${esc(x.file)}</b> — ${esc(x.msg)}</div>`).join("");
+}
+
+/* ---------- rolling-window detail ---------- */
+let ROLL_VIEW=null;
+function showRolling(code){
+  const d=S.cats[S.active]; if(!d) return;
+  let name,p;
+  if(code==="__bench__"){ if(!d.benchProxy) return; name=d.benchName; p=d.benchProxy; }
+  else { const r=d.rows.find(x=>x.code===+code); if(!r||!r.proxy) return; name=r.name; p=r.proxy; }
+  ROLL_VIEW={fund:name,p};
+  $("#roll-title").textContent=name;
+  $("#roll-sub").innerHTML=`<b>${p.obs.toLocaleString()}</b> separate ${p.roll}-year windows — one for every trading day from ${p.from} to ${p.to}.`;
+  $("#roll-stats").innerHTML=[["Mean",p.value],["Median",p.median],["25th",p.p25],["75th",p.p75],
+    ["Min",p.min],["Max",p.max],["Negative",p.negative]]
+    .map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v" style="font-size:17px">${v.toFixed(2)}%</div></div>`).join("");
+  $("#roll-buckets").innerHTML=p.buckets.map(b=>`<div class="row" style="gap:10px;margin:3px 0">
+    <span class="tiny muted" style="width:88px">${b.label}</span>
+    <span style="flex:1;height:9px;background:var(--line);border-radius:5px;overflow:hidden">
+      <span style="display:block;height:100%;width:${b.pct.toFixed(1)}%;background:${b.lo<0?"var(--bad)":"var(--acc)"}"></span></span>
+    <span class="tiny num muted" style="width:96px;text-align:right">${b.n.toLocaleString()} · ${b.pct.toFixed(1)}%</span></div>`).join("");
+  const row=w=>`<tr><td class="num">${new Date(w.s).toISOString().slice(0,10)}</td>
+    <td class="num">${new Date(w.e).toISOString().slice(0,10)}</td>
+    <td class="num" style="font-weight:550;${w.r<0?"color:var(--bad)":""}">${(w.r*100).toFixed(2)}%</td></tr>`;
+  $("#roll-sample").innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Start</th><th>End</th><th>Annualised</th></tr></thead><tbody>
+    ${p.windows.slice(0,10).map(row).join("")}
+    <tr><td colspan="3" class="muted" style="text-align:center">… ${(p.obs-20).toLocaleString()} more …</td></tr>
+    ${p.windows.slice(-10).map(row).join("")}</tbody></table></div>`;
+  $("#rollmodal").classList.remove("hidden");
+}
+function downloadRolling(){
+  if(!ROLL_VIEW) return;
+  const {fund,p}=ROLL_VIEW;
+  const L=["Fund,Window start,Window end,Annualised return %"];
+  for(const w of p.windows)
+    L.push(`"${fund.replace(/"/g,'""')}",${new Date(w.s).toISOString().slice(0,10)},${new Date(w.e).toISOString().slice(0,10)},${(w.r*100).toFixed(4)}`);
+  saveBlob(L.join("\n"),`rolling-${p.roll}y-over-${p.years}y-${fund.slice(0,40).replace(/[^a-z0-9]+/gi,"-")}.csv`);
+}
+
+/* ---------- rolling-return prompt ---------- */
+function showModal(ctx){
+  const {fund,idx,total,proxy,err}=ctx; Q.ctxProxy=proxy;
+  $("#m-title").textContent="Rolling return needed";
+  $("#m-count").textContent=`${idx} of ${total}`;
+  $("#m-fund").textContent=fund.name;
+  $("#m-err").innerHTML=`<b>Automatic fetch failed.</b> ${esc(err)}`;
+  $("#m-proxy").innerHTML= proxy
+    ? `NAV-computed: <b>${proxy.value.toFixed(2)}%</b> · median ${proxy.median.toFixed(2)}% · ${proxy.negative.toFixed(0)}% of windows negative <span class="muted">(${proxy.obs.toLocaleString()} windows over ${proxy.years}y)</span>`
+    : `<span class="muted">No rolling figure — under ${ROLL_SPAN} years of history.</span>`;
+  $("#m-useproxy").disabled=!proxy; $("#m-allproxy").disabled=!proxy;
+  $("#m-input").value=""; $("#modal").classList.remove("hidden");
+  setTimeout(()=>$("#m-input").focus(),50);
+}
+const hideModal=()=>$("#modal").classList.add("hidden");
+function wireModal(){
+  const submit=()=>{ const v=parseFloat($("#m-input").value);
+    if(!Number.isFinite(v)){ $("#m-input").style.borderColor="var(--bad)"; return; }
+    Q.resolve&&Q.resolve({value:v,source:"Manual entry"}); };
+  $("#m-ok").onclick=submit;
+  $("#m-input").onkeydown=e=>{ e.target.style.borderColor=""; if(e.key==="Enter")submit(); };
+  $("#m-useproxy").onclick=()=>Q.resolve&&Q.resolve({value:Q.ctxProxy.value,source:"Computed from NAV"});
+  $("#m-allproxy").onclick=()=>{ Q.applyAll="proxy"; Q.resolve&&Q.resolve({value:Q.ctxProxy.value,source:"Computed from NAV"}); };
+  $("#m-skip").onclick=()=>Q.resolve&&Q.resolve(null);
+  $("#m-allskip").onclick=()=>{ Q.applyAll="skip"; Q.resolve&&Q.resolve(null); };
+}
+
+/* ---------- rolling-return CSV import ---------- */
+function parseCSV(text){
+  const rows=text.trim().split(/\r?\n/).map(l=>l.split(/[,\t;]/).map(c=>c.trim().replace(/^"|"$/g,"")));
+  let n=0; Q.csv.clear();
+  for(const r of rows){
+    if(r.length<2) continue;
+    const name=r[0];
+    const v=r.slice(1).map(c=>parseFloat(String(c).replace(/[%\s,]/g,""))).find(Number.isFinite);
+    if(!name||!Number.isFinite(v)) continue;
+    if(/fund|scheme|name/i.test(name)&&n===0&&!/\d/.test(name)) continue;
+    Q.csv.set(normName(name),v); n++;
+  }
+  return n;
+}
+
+/* ---------- benchmark freshness banner ---------- */
+function renderBanner(){
+  const f=triFreshness();
+  const el=$("#tribanner"); if(!el) return;
+  if(f.state==="fresh"){ el.innerHTML=""; return; }
+  const [kind,msg] =
+    f.state==="none" ? ["warn","<b>No benchmark data yet.</b> Alpha, upside capture and downside capture cannot be computed without it, and scoring falls back to the category average alone."]
+  : f.state==="due"  ? ["warn",`<b>Benchmark data is a month behind.</b> Newest index value is ${f.newest} (${f.days} days ago). Funds are being scored against a stale benchmark.`]
+  :                    ["bad", `<b>Benchmark data is ${f.days} days old.</b> Newest index value is ${f.newest}. Anything scored against it is comparing recent fund performance to an out-of-date market.`];
+  el.innerHTML=`<div class="note ${kind}" style="margin-bottom:18px">
+    <div class="row spread" style="gap:12px">
+      <span style="flex:1;min-width:200px">${msg}</span>
+      <button id="tri-update" class="primary" style="padding:8px 16px;font-size:13px">
+        <i class="fa-solid fa-rotate"></i>Update now</button>
+    </div></div>`;
+  $("#tri-update").onclick=openUpdate;
+}
+
+async function openUpdate(){
+  $("#upmodal").classList.remove("hidden");
+  const log=$("#up-log"); log.innerHTML=""; $("#up-routes").classList.add("hidden");
+  const line=(t,c)=>{const d=document.createElement("div");
+    d.style.cssText="padding:2px 0;"+(c?`color:var(--${c})`:"color:var(--ink2)");
+    d.innerHTML=t; log.appendChild(d);};
+  const r=await attemptTRIFetch(t=>line(t));
+  if(r.ok){
+    line("Fetch succeeded — "+esc(r.note),"ok");
+    line("Import the file below.","");
+  }else{
+    line(`Direct fetch failed: <code>${esc(r.reason)}</code>`,"bad");
+    line(esc(r.detail),"");
+    line("This is a browser restriction, not a fault on your machine — NSE requires a <code>Referer</code> header, which scripts are forbidden from setting. A plain script has no such limit, which is what the auto-fetcher is.","warn");
+  }
+  $("#up-routes").classList.remove("hidden");
+}
+
+/* ===================== PORTFOLIO REVIEW =====================
+   Implements the selection rules from the FPA / Ambition Learning email thread
+   verbatim, so a recommendation can always be traced to a stated rule:
+
+   R1 (Varad) Sortino, Alpha and Upside Capture must be above BOTH the benchmark
+              and the category average. Downside Capture must be below both.
+   R2 (Varad) If everything is below benchmark and category: stop FRESH money,
+              but keep an existing SIP running. Then check Std Dev and Beta —
+              if those are also higher than peers the fund is underperforming
+              outright and exiting is on the table.
+   R3 (Varad) Review every 6 months; at minimum once a financial year.
+   R4 (Varad) Avoid funds under 3 years past NFO — the risk metrics do not exist
+              yet. Under 10 years is fine given a solid 5-year record.
+   R6 (Kirtan) Judge rolling returns on the AVERAGE, not the minimum.
+   R7 (Kirtan) "Large or flexicap + Mid + Small is all you really need to
+              offer. You can avoid everything else."
+
+   R7 tags categories; it never removes them. Every category stays available.  */
+
+const KEY_METRICS=["sortino","alpha","up_capture"];   // must beat both (R1)
+const KEY_INVERSE=["down_capture"];                    // must be below both (R1)
+const CORE_CATEGORIES=["largecap","flexicap","midcap","smallcap"];
+
+const VERDICTS={
+  HEALTHY:{label:"Continue",      cls:"good",  act:"Keep the SIP running. Fresh lumpsum is fine."},
+  HOLD:   {label:"Hold SIP only", cls:"warn",  act:"Keep the existing SIP. Stop fresh purchases."},
+  SWITCH: {label:"Switch out",    cls:"crit",  act:"Underperforming on returns AND carrying more risk. Move it."},
+  TOO_NEW:{label:"Too new",       cls:"warn",  act:"Under 3 years since NFO — risk metrics do not exist yet."},
+  NO_DATA:{label:"No data",       cls:"muted", act:"Could not score this holding."},
+};
+
+function pointFor(row,key){
+  const i=PARAMS.findIndex(p=>p.key===key);
+  return i<0?null:row.s.pts[i];
+}
+
+/* One holding -> a verdict with the numbers that produced it. */
+function reviewHolding(row,cat,h){
+  const out={row,cat,reasons:[],evidence:[]};
+  const ageY=row.ageYears;
+
+  if(ageY!=null&&ageY<3){
+    out.verdict="TOO_NEW";
+    out.reasons.push(`Only ${ageY.toFixed(1)} years since launch. R4: avoid funds under 3 years — the risk metrics are not meaningful yet.`);
+    return out;
+  }
+  if(row.s.pct==null){ out.verdict="NO_DATA"; out.reasons.push("Not enough NAV history to score."); return out; }
+
+  const hasBench=!!cat.bmM;
+  const key=[...KEY_METRICS,...KEY_INVERSE];
+  let beatBoth=0, scored=0, failed=[];
+  for(const k of key){
+    const p=pointFor(row,k); if(p==null) continue;
+    scored++;
+    const P=PARAMS.find(x=>x.key===k);
+    const f=row.m[k], b=cat.bmM?cat.bmM[k]:null, c=cat.catAvg[k];
+    out.evidence.push({metric:P.label, fund:f, bench:b, cat:c, dir:P.dir, pts:p});
+    if(p===(hasBench?2:1)) beatBoth++; else failed.push(P.short);
+  }
+  out.keyBeat=beatBoth; out.keyScored=scored;
+
+  // risk side of R2
+  const sd=row.m.stdev, sdCat=cat.catAvg.stdev;
+  const bt=row.m._beta,  btCat=cat.catAvg._beta;
+  const sdLower = sd!=null&&sdCat!=null ? sd<sdCat : null;
+  const btLower = bt!=null&&btCat!=null ? bt<btCat : null;
+  out.risk={sd,sdCat,bt,btCat,sdLower,btLower};
+
+  if(scored===0){ out.verdict="NO_DATA"; out.reasons.push("None of the key metrics could be computed — the benchmark TRI is probably missing."); return out; }
+
+  if(beatBoth===scored){
+    out.verdict="HEALTHY";
+    out.reasons.push(`Clears every key metric against ${hasBench?"both the benchmark and the category average":"the category average"} (R1): ${key.filter(k=>pointFor(row,k)!=null).map(k=>PARAMS.find(x=>x.key===k).short).join(", ")}.`);
+  } else if(beatBoth>=Math.ceil(scored/2)){
+    out.verdict="HEALTHY";
+    out.reasons.push(`Clears ${beatBoth} of ${scored} key metrics (R1). Falls short on ${failed.join(", ")} — worth watching, not acting on.`);
+  } else {
+    // R2: returns are weak. Risk decides between holding and exiting.
+    const riskWorse = (sdLower===false)||(btLower===false);
+    if(riskWorse){
+      out.verdict="SWITCH";
+      const bits=[];
+      if(sdLower===false) bits.push(`Std Dev ${sd.toFixed(2)}% vs category ${sdCat.toFixed(2)}%`);
+      if(btLower===false) bits.push(`Beta ${bt.toFixed(2)} vs category ${btCat.toFixed(2)}`);
+      out.reasons.push(`Only ${beatBoth} of ${scored} key metrics beat both comparators, AND risk is above the category (${bits.join("; ")}). R2: taking more risk for less return — consider exiting.`);
+    } else {
+      out.verdict="HOLD";
+      out.reasons.push(`Only ${beatBoth} of ${scored} key metrics beat both comparators (weak on ${failed.join(", ")}), but risk is not worse than the category${
+        sd!=null&&sdCat!=null?` (Std Dev ${sd.toFixed(2)}% vs ${sdCat.toFixed(2)}%)`:""}. R2: stop fresh purchases, keep the existing SIP running.`);
+    }
+  }
+  // A running SWP changes what a verdict MEANS. "Switch out" of a fund the
+  // client draws an income from is not a fund decision, it is an income
+  // decision — the withdrawal has to be re-established elsewhere and the exit
+  // realises gains on units being sold monthly anyway. Never let that verdict
+  // reach a client unqualified.
+  if(h && h.swp){
+    const amt=`₹${h.swp.toLocaleString("en-IN")}/month`;
+    out.reasons.push(out.verdict==="SWITCH"
+      ? `CAUTION: a running SWP of ${amt} is being drawn from this fund. Switching stops that income — the withdrawal must be re-established in the replacement, and the exit realises gains on top of the units already being sold. Treat this as an income decision, not just a fund decision.`
+      : `A running SWP of ${amt} is drawn from this fund. Factor the withdrawal into any change here.`);
+  }
+  if(!hasBench) out.reasons.push(`No benchmark TRI imported for ${cat.cfg.name}, so this compares against the category average alone — import ${IDX_BY_KEY[cat.cfg.tri].name} for the full test.`);
+  if(!CORE_CATEGORIES.includes(cat.cfg.id))
+    out.reasons.push(`R7: Kirtan's guidance is that Large or Flexi Cap + Mid + Small is all you need to offer, and everything else can be avoided. ${cat.cfg.name} sits outside that core — a reason to question the allocation itself, separately from this fund's numbers.`);
+  return out;
+}
+
+/* Best replacement in the same category: highest score, excluding what is held. */
+function suggestSwitch(cat,heldCodes){
+  const pool=cat.rows.filter(r=>r.s.pct!=null&&!heldCodes.has(r.code)&&(r.ageYears==null||r.ageYears>=3));
+  if(!pool.length) return null;
+  const best=pool.slice().sort((a,b)=>b.s.pct-a.s.pct)[0];
+  return best.s.pct>0.5?best:null;
+}
+
+/* ---------- parsing the client's holdings ---------- */
+function parsePortfolio(text){
+  const out=[];
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.trim(); if(!line) continue;
+    const cells=line.split(/[,;\t]/).map(c=>c.trim().replace(/^"|"$/g,""));
+    const name=cells[0];
+    if(!name||/^(fund|scheme|name)\b/i.test(name)&&cells.length>1&&!/\d/.test(cells[1]||"")) continue;
+    const nums=cells.slice(1).map(c=>parseFloat(String(c).replace(/[₹,\s]/g,""))).filter(Number.isFinite);
+    out.push({name, sip:nums[0]??null, value:nums[1]??null});
+  }
+  return out;
+}
+
+/* Match a typed holding to a real AMFI scheme. Exact-ish first, then loose. */
+function matchScheme(name){
+  if(!UNIVERSE) return null;
+  const target=normName(name);
+  let best=null,bestLen=1e9;
+  for(const s of UNIVERSE){
+    const n=s.schemeName; if(!n||!isPlan(n)) continue;
+    const k=normName(n);
+    if(k===target) return {code:s.schemeCode,name:n,exact:true};
+    if(k.includes(target)||target.includes(k)){
+      if(n.length<bestLen){best={code:s.schemeCode,name:n,exact:false};bestLen=n.length;}
+    }
+  }
+  return best;
+}
+
+/* Which of our categories does a scheme belong to? */
+function categoryOf(schemeCategory){
+  const c=(schemeCategory||"").toLowerCase();
+  for(const cfg of CATEGORIES) if(cfg.match(c)) return cfg.id;
+  return null;
+}
+
+/* ---------- orchestration ---------- */
+const PF={ holdings:[], results:[], running:false, meta:{}, client:"", coverage:null };
+
+/**
+ * `input` is EITHER pasted text OR an array of already-parsed holdings.
+ *
+ * It used to be text only, so the file importer — which had proper typed
+ * objects — flattened them to "name, sip, value" and this re-parsed them.
+ * parsePortfolio() collects NUMBERS, not positions, so a holding with a value
+ * but no SIP arrived as "name, , 453346.5", the blank collapsed, and the value
+ * was read as the SIP. Every client review reported holding values as monthly
+ * SIP commitments. Structured data now stays structured; text parsing is only
+ * for text the user actually typed.
+ */
+async function runPortfolioReview(input){
+  if(PF.running) return; PF.running=true;
+  showView("pf");
+  const btn=$("#pfrun"); btn.disabled=true;
+  try{
+    const entries=Array.isArray(input)?input:parsePortfolio(input);
+    if(!entries.length) throw new Error("no holdings found — put one fund name per line");
+    pfStatus(`Loading the AMFI scheme list…`);
+    await loadUniverse(n=>pfStatus(`Loading AMFI scheme list — ${n.toLocaleString()}…`));
+
+    // 1. match each holding, then find its SEBI category from the scheme's own meta
+    const matched=[];
+    for(let i=0;i<entries.length;i++){
+      const e=entries[i];
+      pfStatus(`Matching ${i+1}/${entries.length}: ${e.name}`);
+      // The importer already matched this against AMFI and had the user
+      // confirm it. Re-deriving it from a name string would be a second,
+      // lossier guess at something already decided.
+      const m=e.matched||matchScheme(e.name);
+      if(!m){ matched.push({...e,error:"no AMFI scheme matched this name"}); continue; }
+      const nav=await loadNav(m.code).catch(()=>null);
+      if(!nav){ matched.push({...e,matched:m,error:"could not load NAV history"}); continue; }
+      const catId=categoryOf(nav.meta.scheme_category);
+      const st=(PF.meta[normName(m.name)]||{}).schemeType||"";
+      matched.push({...e, matched:m, schemeCategory:nav.meta.scheme_category, catId, schemeType:st,
+        error: catId?null:`AMFI classifies this as "${nav.meta.scheme_category||"unknown"}"${
+          st?` and the statement as "${st}"`:""} — outside the equity and hybrid categories this engine scores, so there is no benchmark or peer set to judge it against.`});
+    }
+
+    // 2. load every category the portfolio touches
+    const need=[...new Set(matched.filter(m=>m.catId).map(m=>m.catId))];
+    const missing=need.filter(id=>!S.cats[id]);
+    for(let i=0;i<missing.length;i++){
+      const cfg=CATEGORIES.find(c=>c.id===missing[i]);
+      pfStatus(`Scoring ${cfg.name} (${i+1}/${missing.length}) — this is the slow part…`);
+      await runCategory(cfg,{silent:true});
+    }
+
+    // 3. apply the rules
+    const heldByCat={};
+    for(const m of matched) if(m.catId){ (heldByCat[m.catId]=heldByCat[m.catId]||new Set()).add(m.matched.code); }
+    const results=[];
+    for(const m of matched){
+      if(m.error||!m.catId){ results.push({...m,verdict:"NO_DATA",reasons:[m.error||"unclassified"]}); continue; }
+      const cat=S.cats[m.catId];
+      const row=cat&&cat.rows.find(r=>r.code===m.matched.code);
+      if(!row){ results.push({...m,verdict:"NO_DATA",
+        reasons:[`${cat?cat.cfg.name:"category"} loaded, but this scheme was not among the schemes scored — raise "Funds per category" to All and try again.`]}); continue; }
+      const rev=reviewHolding(row,cat,m);
+      rev.switchTo = (rev.verdict==="SWITCH"||rev.verdict==="HOLD")
+        ? suggestSwitch(cat,heldByCat[m.catId]) : null;
+      results.push({...m, ...rev, catName:cat.cfg.name});
+    }
+    PF.holdings=matched; PF.results=results;
+    pfStatus(`Reviewed ${results.length} holding(s).`,"ok");
+    renderPortfolio();
+  }catch(e){
+    pfStatus(e.message,"err");
+  }finally{ PF.running=false; $("#pfrun").disabled=false; }
+}
+const pfStatus=(t,k)=>{const e=$("#pfstatus"); e.textContent=t;
+  e.className="text-xs mt-2 "+(k==="err"?"text-red-600 dark:text-red-400":k==="ok"?"text-emerald-600 dark:text-emerald-400":"text-slate-500 dark:text-slate-400");};
+
+/* ---------- rendering ---------- */
+const VCLS={good:"g",warn:"a",crit:"r",muted:"n"};
+
+function evidenceTable(ev,hasBench){
+  if(!ev.length) return "";
+  const cell=v=>v==null?'<span class="rag n">—</span>':v.toFixed(2)+"%";
+  return `<div class="tbl-wrap" style="margin-top:10px"><table><thead><tr>
+      <th>Key metric</th><th>Fund</th><th>Benchmark</th><th>Category avg</th><th>Verdict</th></tr></thead><tbody>
+    ${ev.map(e=>{
+      const okB=e.bench==null?null:(e.dir===1?e.fund>e.bench:e.fund<e.bench);
+      const okC=e.cat==null?null:(e.dir===1?e.fund>e.cat:e.fund<e.cat);
+      const both=okB&&okC;
+      return `<tr><td>${esc(e.metric)} <span class="muted">(want ${e.dir===1?"above":"below"} both)</span></td>
+        <td class="num" style="font-weight:600">${cell(e.fund)}</td>
+        <td class="num"${okB===false?' style="color:var(--bad)"':""}>${cell(e.bench)}</td>
+        <td class="num"${okC===false?' style="color:var(--bad)"':""}>${cell(e.cat)}</td>
+        <td class="num" style="font-weight:650;color:var(--${both?"ok":"bad"})">${both?"clears":"fails"}</td></tr>`;}).join("")}
+  </tbody></table></div>${hasBench?"":'<p class="tiny" style="color:var(--warn);margin-top:6px">Benchmark column empty — TRI not imported for this category.</p>'}`;
+}
+
+/* The review used to be a flat list in whatever order the statement happened to
+   be in: twenty holdings, every one with its evidence table open, eighteen
+   pages of equal weight. A client cannot tell from that what to DO.
+
+   So: grouped by action, most urgent first, and within a group by money at
+   stake. Evidence folds away for holdings that need no decision and stays open
+   for the ones that do. Folding is not truncation — every number is still in
+   the document, and print forces every panel open so the client's PDF is
+   complete. */
+const VERDICT_ORDER=["SWITCH","HOLD","HEALTHY","TOO_NEW","NO_DATA"];
+const GROUP_BLURB={
+  SWITCH: "Underperforming and carrying more risk than the category. These are the decisions to make.",
+  HOLD:   "Keep the existing SIP running, but stop directing fresh money here.",
+  HEALTHY:"Doing their job. No action needed.",
+  TOO_NEW:"Under three years since launch — risk metrics do not exist yet.",
+  NO_DATA:"Could not be scored. Usually a name that did not match, or a scheme with too little history.",
+};
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+
+/* Says plainly what this review does and does not cover, on the client's own
+   document. Silence here reads as "everything is accounted for". */
+function coverageNote(){
+  const c=PF.coverage;
+  if(!c) return "";
+  const bits=[];
+  if(c.kept<c.total){
+    bits.push(`<b>${c.kept} of ${c.total}</b> holdings are reviewed below.`
+      +` ${c.total-c.kept} could not be matched to an AMFI scheme`
+      +(c.droppedValue?` and ${inr(c.droppedValue)} of value is therefore not covered`:"")
+      +`: ${c.droppedNames.map(esc).join("; ")}.`);
+  }
+  const off=Object.values(c.stated||{}).filter(x=>x&&!x.ok);
+  for(const x of off){
+    bits.push(`${esc(x.label)} read as <b>${inr(x.got)}</b> but the statement totals `
+      +`<b>${inr(x.want)}</b> — a difference of ${inr(Math.abs(x.diff))}.`);
+  }
+  if(!bits.length){
+    return `<p class="tiny muted" style="margin-bottom:4px">
+      <i class="fa-solid fa-circle-check" style="color:var(--ok)"></i>
+      Every holding reviewed, and the totals tie out to the statement.</p>`;
+  }
+  return `<div class="note warn" style="margin-bottom:6px">
+    <b>What this review does not cover</b>
+    ${bits.map(b=>`<div class="tiny" style="margin-top:4px">${b}</div>`).join("")}</div>`;
+}
+
+function renderPortfolio(){
+  const R=PF.results;
+  if(!R.length){ $("#pfout").innerHTML=""; return; }
+  $("#pf-actions").classList.remove("hidden");
+  const count=k=>R.filter(r=>r.verdict===k).length;
+  const sum=k=>R.reduce((a,r)=>a+(r[k]||0),0);
+  const totVal=sum("value"), totSip=sum("sip"), totSwp=sum("swp");
+  const atRisk=R.filter(r=>r.verdict==="SWITCH").reduce((a,r)=>a+(r.value||0),0);
+
+  const groups=VERDICT_ORDER
+    .map(v=>({v, rows:R.filter(r=>r.verdict===v)
+                        .sort((a,b)=>(b.value||0)-(a.value||0))}))
+    .filter(g=>g.rows.length);
+
+  $("#pfout").innerHTML=`
+  ${letterheadHTML("Portfolio Review", PF.client)}
+  <div class="stats" style="margin-top:18px">
+    ${[["Portfolio value",totVal?inr(totVal):"—",`${R.length} holdings`],
+       ["Needs a decision",count("SWITCH")+count("HOLD"),
+         atRisk?`${inr(atRisk)} in switch-outs`:"switch or stop fresh money"],
+       ["Monthly SIP",totSip?inr(totSip):"—","going in"],
+       ["Monthly SWP",totSwp?inr(totSwp):"—","coming out"]]
+      .map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("")}
+  </div>
+  ${coverageNote()}
+  ${groups.map(g=>{const V=VERDICTS[g.v]||VERDICTS.NO_DATA; return `
+    <div class="grouphead">
+      <span class="verdict ${VCLS[V.cls]}">${V.label}</span>
+      <b>${g.rows.length}</b>
+      <span class="small muted">${GROUP_BLURB[g.v]||""}</span>
+    </div>
+    ${g.rows.map(r=>{
+    const V=VERDICTS[r.verdict]||VERDICTS.NO_DATA;
+    const needsAction = r.verdict==="SWITCH"||r.verdict==="HOLD";
+    return `<div class="card${needsAction?" act":""}">
+      <div class="row spread" style="margin-bottom:8px">
+        <div style="flex:1;min-width:220px">
+          <div style="font-weight:600">${esc(r.matched?r.matched.name:r.name)}</div>
+          <div class="tiny muted">${r.matched&&!r.matched.exact?`<span style="color:var(--warn)">matched from "${esc(r.name)}"</span> · `:""}
+            ${esc(r.catName||r.schemeCategory||"unclassified")}${r.value?` · ₹${r.value.toLocaleString("en-IN")} held`:""}${r.sip?` · SIP ₹${r.sip.toLocaleString("en-IN")}/mth`:""}${r.swp?` · <span style="color:var(--warn)">SWP ₹${r.swp.toLocaleString("en-IN")}/mth</span>`:""}
+            ${r.row&&r.row.ageYears!=null?` · ${r.row.ageYears.toFixed(1)}y old`:""}</div>
+        </div>
+        <span class="verdict ${VCLS[V.cls]}">${V.label}</span>
+        ${r.row&&r.row.s.pct!=null?`<span class="tiny muted num">${r.row.s.total}/${r.row.s.max}${r.row.rank?` · rank ${r.row.rank}`:""}</span>`:""}
+      </div>
+      <div class="small" style="font-weight:550;margin-bottom:6px">${esc(V.act)}</div>
+      ${(r.reasons||[]).map(x=>`<div class="tiny muted" style="margin-bottom:4px">• ${x}</div>`).join("")}
+      ${r.evidence?`<details class="eviden"${needsAction?" open":""}>
+        <summary>The numbers behind this${needsAction?"":" — nothing to act on"}</summary>
+        ${evidenceTable(r.evidence,!!(S.cats[r.catId]&&S.cats[r.catId].bmM))}
+      </details>`:""}
+      ${r.switchTo?`<div class="note info" style="margin-top:12px">
+        <div class="eyebrow" style="color:var(--acc);margin-bottom:4px">Better option in the same category</div>
+        <div style="font-weight:600">${esc(r.switchTo.name)}</div>
+        <details class="eviden" open><summary>Side by side, all ${PARAMS.length} parameters</summary>
+        <div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Metric</th><th>Held</th><th>Suggested</th><th>Gain</th></tr></thead><tbody>
+          ${PARAMS.map(p=>{const a=r.row.m[p.key],b=r.switchTo.m[p.key];
+            if(a==null||b==null) return "";
+            const better=p.dir===1?b>a:b<a, diff=(b-a)*(p.dir===1?1:-1);
+            return `<tr><td>${esc(p.label)}</td><td class="num">${a.toFixed(2)}${p.unit}</td>
+              <td class="num" style="font-weight:600">${b.toFixed(2)}${p.unit}</td>
+              <td class="num" style="color:var(--${better?"ok":"bad"})">${diff>0?"+":""}${diff.toFixed(2)}</td></tr>`;}).join("")}
+        </tbody></table></div></details>
+        <div class="tiny muted" style="margin-top:6px">Score ${r.switchTo.s.total}/${r.switchTo.s.max} · rank ${r.switchTo.rank}. ${
+          r.verdict==="HOLD"?"Direct new SIP instalments here rather than switching the existing corpus."
+                            :"Switching realises capital gains — check tax and exit load first."}</div>
+      </div>`:""}
+    </div>`;}).join("")}`;}).join("")}
+  <p class="tiny muted">Verdicts apply the FPA rules to the numbers above. They take no account of the client's goals, horizon, tax position, exit loads or overlap — that judgement is yours. Review at least once a financial year (R3).</p>
+  ${disclaimerHTML()}`;
+}
+
+function exportPortfolioCSV(){
+  if(!PF.results.length) return;
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const L=[["Holding as entered","Matched scheme","Category","Monthly SIP","Monthly SWP","Current value","Verdict","Action","Score","Max","Rank","Reasons","Suggested switch","Suggested score"]
+    .concat(PARAMS.map(p=>"Held "+p.short)).concat(PARAMS.map(p=>"Suggested "+p.short)).map(q).join(",")];
+  for(const r of PF.results){
+    const V=VERDICTS[r.verdict]||VERDICTS.NO_DATA;
+    L.push([r.name,r.matched?r.matched.name:"",r.catName||"",r.sip??"",r.swp??"",r.value??"",V.label,V.act,
+      r.row?r.row.s.total:"",r.row?r.row.s.max:"",r.row?r.row.rank:"",(r.reasons||[]).join(" | "),
+      r.switchTo?r.switchTo.name:"",r.switchTo?r.switchTo.s.total+"/"+r.switchTo.s.max:""]
+      .map(q)
+      .concat(PARAMS.map(p=>r.row&&r.row.m[p.key]!=null?r.row.m[p.key].toFixed(4):""))
+      .concat(PARAMS.map(p=>r.switchTo&&r.switchTo.m[p.key]!=null?r.switchTo.m[p.key].toFixed(4):"")).join(","));
+  }
+  const who=(PF.client||"").trim();
+  saveBlob(brandCSVHeader("Portfolio Review"+(who?" — "+who:""))+L.join("\n"),
+    "portfolio-review"+(who?"-"+who.replace(/[^\w]+/g,"-").toLowerCase():"")+".csv");
+}
+
+/* ===================== SPREADSHEET / PDF INTAKE =====================
+   .xlsx is read natively — no library. An xlsx is a ZIP of XML, and the
+   browser can already inflate: DecompressionStream("deflate-raw"). That keeps
+   the file self-contained rather than adding another CDN that can be blocked.
+   PDF needs pdf.js, which IS a CDN dependency; if it cannot load the app says
+   so plainly instead of failing quietly.                                     */
+
+/* ---------- minimal ZIP reader ---------- */
+async function unzip(buf){
+  const dv=new DataView(buf), u8=new Uint8Array(buf);
+  // End of Central Directory: scan backwards for the signature
+  let eocd=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-66000);i--)
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  if(eocd<0) throw new Error("not a valid .xlsx (no ZIP directory found)");
+  const count=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  const files={};
+  for(let i=0;i<count;i++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true);
+    const csize=dv.getUint32(off+20,true);
+    const nameLen=dv.getUint16(off+28,true);
+    const extraLen=dv.getUint16(off+30,true);
+    const cmtLen=dv.getUint16(off+32,true);
+    const lho=dv.getUint32(off+42,true);
+    const name=new TextDecoder().decode(u8.subarray(off+46,off+46+nameLen));
+    // local header tells us where the data actually starts
+    const lNameLen=dv.getUint16(lho+26,true), lExtraLen=dv.getUint16(lho+28,true);
+    const start=lho+30+lNameLen+lExtraLen;
+    const raw=u8.subarray(start,start+csize);
+    if(method===0) files[name]=new TextDecoder().decode(raw);
+    else if(method===8){
+      const ds=new DecompressionStream("deflate-raw");
+      const blob=new Blob([raw]).stream().pipeThrough(ds);
+      files[name]=new TextDecoder().decode(await new Response(blob).arrayBuffer());
+    }
+    off+=46+nameLen+extraLen+cmtLen;
+  }
+  return files;
+}
+
+const colNum=ref=>{let n=0;for(const ch of ref.replace(/\d+/g,""))n=n*26+(ch.charCodeAt(0)-64);return n-1;};
+
+/* ---------- xlsx -> array of row arrays ---------- */
+let ALL_SHEETS=[];
+async function readXLSX(file){
+  const files=await unzip(await file.arrayBuffer());
+  const dom=s=>new DOMParser().parseFromString(s,"application/xml");
+  // shared strings
+  let shared=[];
+  const ss=files["xl/sharedStrings.xml"];
+  if(ss) shared=[...dom(ss).getElementsByTagName("si")]
+    .map(si=>[...si.getElementsByTagName("t")].map(t=>t.textContent).join(""));
+  // Read EVERY sheet. Some exports put a cover page first and the holdings on
+  // sheet 2 or 3; taking only the first sheet finds nothing.
+  const sheetNames=Object.keys(files).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k))
+    .sort((a,b)=>(+a.match(/\d+/)[0])-(+b.match(/\d+/)[0]));
+  if(!sheetNames.length) throw new Error("no worksheet found inside the workbook");
+  const sheets=[];
+  for(const sn of sheetNames){
+    const doc=dom(files[sn]);
+    const rows=[];
+    for(const row of doc.getElementsByTagName("row")){
+      const cells=[];
+      for(const c of row.getElementsByTagName("c")){
+        const i=colNum(c.getAttribute("r")||"A1");
+        const t=c.getAttribute("t");
+        let v="";
+        if(t==="inlineStr"){ v=[...c.getElementsByTagName("t")].map(x=>x.textContent).join(""); }
+        else { const vEl=c.getElementsByTagName("v")[0]; v=vEl?vEl.textContent:"";
+               if(t==="s") v=shared[+v]??""; }
+        cells[i]=String(v).trim();
+      }
+      for(let i=0;i<cells.length;i++) if(cells[i]===undefined) cells[i]="";
+      if(cells.some(x=>x!=="")) rows.push(cells);
+    }
+    if(rows.length) sheets.push(rows);
+  }
+  if(!sheets.length) throw new Error("every sheet in this workbook is empty");
+  // prefer the sheet that actually contains a recognisable table
+  sheets.sort((a,b)=>(findTables(b).length)-(findTables(a).length));
+  const out=sheets[0];
+  ALL_SHEETS=sheets;
+  return out;
+}
+
+/* ---------- pdf -> text lines (pdf.js) ---------- */
+let PDFJS=null;
+async function loadPdfJs(){
+  if(PDFJS) return PDFJS;
+  if(window.pdfjsLib){ PDFJS=window.pdfjsLib; return PDFJS; }
+  await new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=res; s.onerror=()=>rej(new Error("could not load the PDF reader (CDN blocked or offline). Export the statement as Excel or CSV instead."));
+    document.head.appendChild(s);
+  });
+  if(!window.pdfjsLib) throw new Error("could not load the PDF reader (the CDN returned nothing usable — offline, firewall, or an extension blocking it). Export the statement as Excel or CSV instead.");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  PDFJS=window.pdfjsLib; return PDFJS;
+}
+async function readPDF(file,password){
+  const lib=await loadPdfJs();
+  const task=lib.getDocument({data:await file.arrayBuffer(), password:password||undefined});
+  let doc;
+  try{ doc=await task.promise; }
+  catch(e){
+    if(e && (e.name==="PasswordException"||/password/i.test(e.message||"")))
+      throw Object.assign(new Error("This PDF is password protected. Enter the password and try again."),{needPassword:true});
+    throw e;
+  }
+  const rows=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const tc=await page.getTextContent();
+    const byY=new Map();
+    for(const it of tc.items){
+      if(!it.str||!it.str.trim()) continue;
+      const y=Math.round(it.transform[5]);
+      // merge near-identical baselines (sub-pixel drift splits a visual row)
+      let key=y; for(const k of byY.keys()) if(Math.abs(k-y)<=2){key=k;break;}
+      if(!byY.has(key)) byY.set(key,[]);
+      byY.get(key).push({x:it.transform[4], w:it.width||0, s:it.str});
+    }
+    // A statement is a TABLE. Flattening a row to one sentence throws away the
+    // column boundaries, and then "Investment" and "Cur. Value" cannot be told
+    // apart. Split on horizontal gaps instead, so a PDF row comes out shaped
+    // like a spreadsheet row and one parser handles both formats.
+    for(const [,items] of [...byY.entries()].sort((a,b)=>b[0]-a[0])){
+      items.sort((a,b)=>a.x-b.x);
+      const cells=[]; let cur=items[0].s, end=items[0].x+items[0].w;
+      for(let i=1;i<items.length;i++){
+        const it=items[i];
+        if(it.x-end>4){ cells.push(cur.trim()); cur=it.str; }
+        else cur+=it.str;
+        end=it.x+it.w;
+      }
+      cells.push(cur.trim());
+      if(cells.some(c=>c)) rows.push(cells);
+    }
+  }
+  if(!rows.length) throw new Error("no text found — this looks like a scanned PDF, which needs OCR. Use the Excel version instead.");
+  return rows;
+}
+
+/* ---------- shared helpers ---------- */
+const NAMEY=/\b(fund|scheme|plan|yojana)\b/i;
+const NOISE=/^(total|grand total|opening|closing|folio|pan|nominee|advisor|arn|statement|summary|page \d|date|transaction|nav |units|amount|market value|cost value|sub ?total|portfolio|sensex|nifty|source scheme|target scheme)/i;
+
+/* One scheme can appear several times — different folios, and again in the SIP
+   table. Collapse to one holding: values and SIPs ADD UP (two folios in the
+   same fund is one exposure), and the longest name wins because the holdings
+   table truncates but the SIP table does not. */
+function dedupeHoldings(list){
+  const by=new Map();
+  for(const h of list){
+    const k=normName(h.name).slice(0,40);
+    const prev=by.get(k);
+    if(!prev){ by.set(k,{...h, folios:1}); continue; }
+    by.set(k,{
+      name: prev.name.length>=h.name.length?prev.name:h.name,
+      sip:  (prev.sip||0)+(h.sip||0) || null,
+      swp:  (prev.swp||0)+(h.swp||0) || null,
+      value:(prev.value||0)+(h.value||0) || null,
+      invest:(prev.invest||0)+(h.invest||0) || null,
+      folio: prev.folio||h.folio||"",
+      schemeType: prev.schemeType||h.schemeType||"",
+      folios: prev.folios+1,
+    });
+  }
+  return [...by.values()];
+}
+
+/* Backstop for CAS-style statements, where the scheme name is a heading and
+   the figures sit on the lines beneath it rather than in columns. */
+const DATE_LINE=/^\d{1,2}[-\/][A-Za-z0-9]{2,3}[-\/]\d{2,4}\b/;
+const MONEY=/([\d,]+\.\d{2})/;
+function casBlocks(lines){
+  const blocks=[]; let cur=null;
+  for(const line of lines){
+    const isHeading = !DATE_LINE.test(line) && !NOISE.test(line) && NAMEY.test(line)
+      && line.length>=12 && !/opening|closing unit|unit balance/i.test(line);
+    if(isHeading){
+      const name=line.replace(/\((?:[^()]*?(?:ISIN|Advisor|ARN|Registrar)[^()]*)\)/gi," ")
+        .replace(/\bISIN\s*:?\s*[A-Z0-9]+/gi," ").replace(/\bFolio\s*(No\.?)?\s*:?.*$/i," ")
+        .replace(/\s*-\s*$/,"").replace(/\s+/g," ").trim();
+      if(name.length>=8&&NAMEY.test(name)){ cur={name,body:[]}; blocks.push(cur); continue; }
+    }
+    if(cur) cur.body.push(line);
+  }
+  const out=[];
+  for(const b of blocks){
+    let value=null;
+    for(const l of b.body){
+      if(!/(market|current|closing)\s*value/i.test(l)) continue;
+      const tail=l.slice(l.search(/(market|current|closing)\s*value/i));
+      const all=[...tail.matchAll(/([\d,]+\.\d{2,4})/g)].map(m=>parseFloat(m[1].replace(/,/g,"")));
+      if(all.length){ value=all[all.length-1]; break; }
+    }
+    let sip=null;
+    for(const l of b.body){
+      if(!/\bsip\b|systematic/i.test(l)) continue;
+      const m=l.match(MONEY);
+      if(m){ const v=parseFloat(m[1].replace(/,/g,"")); if(v>=100&&v<=1000000){ sip=v; break; } }
+    }
+    out.push({name:b.name, sip, value});
+  }
+  if(!out.length) throw new Error("no scheme rows recognised — use the Excel version of the statement instead");
+  return dedupeHoldings(out);
+}
+
+/* ---------- statement parsing ----------
+   Built against real portfolio statements. Two things drove the design:
+
+   (a) A statement is not one table. Holdings sit in one, and the SIP amounts
+       sit in a SEPARATE table further down with its own header. Reading only
+       the first table finds every holding and not one SIP.
+   (b) Scheme names are TRUNCATED in the holdings table ("Canara Robeco Large
+       And Mid Cap Fund - Regular Gro") but written in full in the SIP table.
+       So the two are joined on FOLIO NUMBER, which is exact, rather than on
+       a name that has been cut short.                                        */
+
+/* Header synonyms across the platforms these statements come from — CAMS,
+   KFintech, MF Utility, and the broker/app exports (Kuvera, Groww, Coin, NJ,
+   Prudent, IIFL, Wealthy and so on). Every one of them names these columns
+   differently, so this list is deliberately wide. When it still guesses wrong
+   the manual column mapper takes over — see mapColumns(). */
+const H_NAME  =/scheme\s*name|fund\s*name|scheme\/plan|^\s*(scheme|fund|name|particulars|security|investment\s*name)\s*$|instrument|product\s*name/i;
+const H_VALUE =/cur+\.?\s*val|current\s*val|market\s*val|valuation|^\s*value\s*$|closing\s*bal|present\s*val|latest\s*val|holding\s*val|amount\s*\(?current|curr\s*amt|mkt\s*val|nav\s*val/i;
+const H_INVEST=/investment|invested|purchase\s*(cost|amount|val)|cost\s*val|amount\s*invested|total\s*invest|principal|contribution|book\s*cost|net\s*invest/i;
+const H_SIP   =/sip\s*amount|instal+ment\s*amount|^\s*sip\s*$|sip\s*\(|monthly\s*(amount|sip|instal)|recurring\s*amount|amount\s*per\s*instal/i;
+const H_FOLIO =/folio|account\s*(no|num)|\bfolio\s*#/i;
+// A withdrawal is not a contribution. Statements carry an SWP table beside the
+// SIP one, and reading it as a SIP would report money leaving as money going in.
+const H_SWP   =/swp\s*amount|systematic\s*withdrawal|withdrawal\s*amount|^\s*swp\s*$|swp\s*\(/i;
+const H_TYPE  =/sch\.?\s*type|scheme\s*type|category|asset\s*class|fund\s*type|sub\s*category/i;
+const H_STATUS=/sip\s*status|terminated|^\s*status\s*$|active\??$|state/i;
+const H_UNITS =/^\s*units?\s*$|bal.*units|closing\s*units|no\.?\s*of\s*units|quantity/i;
+const H_NAV   =/\bnav\b|unit\s*price|^\s*price\s*$|rate/i;
+
+const TOTAL_ROW=/^\s*(grand\s*)?total\s*$/i;
+
+function scanHeader(cells){
+  const m={};
+  cells.forEach((c,i)=>{
+    const v=String(c||"").trim(); if(!v) return;
+    if(m.name===undefined  && H_NAME.test(v))   m.name=i;
+    if(m.value===undefined && H_VALUE.test(v))  m.value=i;
+    if(m.invest===undefined&& H_INVEST.test(v)) m.invest=i;
+    if(m.swp===undefined   && H_SWP.test(v))    m.swp=i;
+    if(m.sip===undefined   && H_SIP.test(v) && !H_SWP.test(v)) m.sip=i;
+    if(m.folio===undefined && H_FOLIO.test(v))  m.folio=i;
+    if(m.type===undefined  && H_TYPE.test(v))   m.type=i;
+    if(m.status===undefined&& H_STATUS.test(v)) m.status=i;
+    if(m.units===undefined && H_UNITS.test(v))  m.units=i;
+    if(m.nav===undefined   && H_NAV.test(v))    m.nav=i;
+  });
+  return m;
+}
+
+/* Locate every table in the sheet by its header row. */
+function findTables(rows){
+  const tables=[];
+  for(let i=0;i<rows.length;i++){
+    const m=scanHeader(rows[i]||[]);
+    if(m.name===undefined) continue;
+    // A single combined table can carry BOTH a value column and a SIP column.
+    // Checking sip first mislabelled it as a SIP-only table and threw the
+    // values away, so holdings wins whenever a value/invested column exists.
+    const hasHoldingCols = m.value!==undefined||m.invest!==undefined;
+    const kind = hasHoldingCols ? "holdings"
+               : m.swp!==undefined ? "swp"
+               : m.sip!==undefined ? "sip" : null;
+    if(!kind) continue;
+    if(tables.length && i-tables[tables.length-1].row<2) continue;
+    tables.push({row:i,map:m,kind});
+  }
+  return tables;
+}
+
+const numCell=v=>{
+  const raw=String(v==null?"":v).trim();
+  if(!raw||/\//.test(raw)) return null;               // "6701134/42" is a folio
+  const n=parseFloat(raw.replace(/[₹,\s%]/g,""));
+  return Number.isFinite(n)?n:null;
+};
+const folioCell=v=>String(v==null?"":v).trim().replace(/\s+/g,"");
+
+function readTable(rows,tbl){
+  const out=[]; const totals={};
+  // tbl.row === -1 means the file has NO header row and the data starts
+  // immediately. Without this, a headerless export silently loses its first
+  // holding, because row 0 gets consumed as a header.
+  for(let i=tbl.row+1;i<rows.length;i++){
+    const r=rows[i]||[];
+    const first=String(r[0]||"").trim();
+    const name=String(r[tbl.map.name]||"").trim();
+    if(TOTAL_ROW.test(first)||TOTAL_ROW.test(name)){
+      // The statement states its own totals. Capture them so the parse can be
+      // checked against the source instead of trusted.
+      if(tbl.map.value!==undefined)  totals.value =numCell(r[tbl.map.value]);
+      if(tbl.map.invest!==undefined) totals.invest=numCell(r[tbl.map.invest]);
+      if(tbl.map.sip!==undefined)    totals.sip   =numCell(r[tbl.map.sip]);
+      if(tbl.map.swp!==undefined)    totals.swp   =numCell(r[tbl.map.swp]);
+      break;
+    }
+    if(!name){ if(r.every(c=>!String(c||"").trim())) continue; else continue; }
+    if(name.length<6) continue;
+    if(H_NAME.test(name)) continue;                             // repeated header
+    // Do NOT gate on the word "Fund" here. Under a holdings header, a row with
+    // a name and a figure IS a holding — and names like "Icici Prudential Gold
+    // Etf Fof - Growth" contain no Fund/Scheme/Plan at all. Requiring it lost
+    // three FOF holdings worth Rs 3,05,201.98 from a real statement.
+    const anyNum = numCell(r[tbl.map.value]) ?? numCell(r[tbl.map.invest])
+                ?? numCell(r[tbl.map.sip]) ?? numCell(r[tbl.map.swp]);
+    if(anyNum==null && !NAMEY.test(name)) continue;
+    out.push({
+      name,
+      folio: tbl.map.folio!==undefined?folioCell(r[tbl.map.folio]):"",
+      value: tbl.map.value!==undefined?numCell(r[tbl.map.value]):null,
+      invest:tbl.map.invest!==undefined?numCell(r[tbl.map.invest]):null,
+      sip:   tbl.map.sip!==undefined?numCell(r[tbl.map.sip]):null,
+      swp:   tbl.map.swp!==undefined?numCell(r[tbl.map.swp]):null,
+      type:  tbl.map.type!==undefined?String(r[tbl.map.type]||"").trim():"",
+      status:tbl.map.status!==undefined?String(r[tbl.map.status]||"").trim():"",
+    });
+  }
+  out.totals=totals;
+  return out;
+}
+
+function rowsToHoldings(rows){
+  const tables=findTables(rows);
+  const hTables=tables.filter(t=>t.kind==="holdings");
+  const sTables=tables.filter(t=>t.kind==="sip");
+  const wTables=tables.filter(t=>t.kind==="swp");
+  if(!hTables.length&&!sTables.length&&!wTables.length) return legacyHoldings(rows);
+
+  const stated={};
+  let holdings=[];
+  for(const t of hTables){ const rd=readTable(rows,t); Object.assign(stated,rd.totals); holdings=holdings.concat(rd); }
+  let sips=[];
+  for(const t of sTables){ const rd=readTable(rows,t);
+    if(rd.totals.sip!=null) stated.sip=rd.totals.sip; sips=sips.concat(rd); }
+
+  let swps=[];
+  for(const t of wTables){ const rd=readTable(rows,t);
+    if(rd.totals.swp!=null) stated.swp=rd.totals.swp; swps=swps.concat(rd); }
+
+  // A terminated instruction is not a live commitment.
+  const live=x=>!x.status||/running|active/i.test(x.status);
+  sips=sips.filter(live);
+  swps=swps.filter(live);
+
+  // Join on folio (exact); fall back to a name-prefix match because the
+  // holdings table truncates names and the SIP table does not.
+  const nameMatches=(a,b)=>{const x=normName(a),y=normName(b);
+    return x&&y&&(x.startsWith(y)||y.startsWith(x));};
+  // Walk the SIP ROWS, not the holdings. Walking holdings copied one SIP onto
+  // every folio of the same scheme: seven Kotak ELSS holding rows each took the
+  // 2,000 SIP, and aggregation then reported 14,000 against a stated 6,000.
+  // A SIP row is one instruction and belongs to exactly one holding.
+  //
+  // A folio is NOT unique to a scheme — one folio commonly holds several — so
+  // the name decides and the folio breaks ties.
+  const assign=(instructions,field)=>{
+    const taken=new Set();
+    for(const s of instructions){
+      const amt=s[field];
+      if(!amt) continue;
+      let cands=holdings.filter((h,i)=>!taken.has(i)&&nameMatches(h.name,s.name));
+      if(cands.length>1&&s.folio){
+        const byFolio=cands.filter(h=>h.folio===s.folio);
+        if(byFolio.length) cands=byFolio;
+      }
+      const pick=cands[0];
+      if(pick){ taken.add(holdings.indexOf(pick)); pick[field]=(pick[field]||0)+amt; }
+    }
+  };
+  assign(sips,"sip");
+  assign(swps,"swp");
+  // SIPs with no matching holding still matter — a running SIP is reviewable.
+  for(const s of sips){
+    const seen=holdings.some(h=>nameMatches(h.name,s.name));
+    if(!seen) holdings.push({name:s.name,folio:s.folio,sip:s.sip,value:null,invest:null,type:"",status:s.status});
+  }
+  for(const w of swps){
+    const seen=holdings.some(h=>nameMatches(h.name,w.name));
+    if(!seen) holdings.push({name:w.name,folio:w.folio,swp:w.swp,value:null,invest:null,type:"",status:w.status});
+  }
+  if(!holdings.length) throw new Error("found the table headers but no scheme rows under them");
+  const list=dedupeHoldings(holdings.map(h=>({name:h.name, sip:h.sip??null,
+    swp:h.swp??null, value:h.value??null, invest:h.invest??null,
+    folio:h.folio||"", schemeType:h.type||""})));
+  list.stated=stated;
+  return list;
+}
+
+/* Older path: no recognisable header, so infer from content. */
+function legacyHoldings(rows){
+  const width=Math.max(...rows.map(r=>r.length));
+  let nameCol=-1,best=0;
+  for(let c=0;c<width;c++){
+    let hits=0;
+    for(const r of rows){ const v=String(r[c]||""); if(v.length>12&&NAMEY.test(v)) hits++; }
+    if(hits>best){best=hits;nameCol=c;}
+  }
+  if(nameCol<0) throw new Error("could not find a column of scheme names");
+  const out=[];
+  for(const r of rows){
+    const name=String(r[nameCol]||"").trim();
+    if(!name||name.length<8||!NAMEY.test(name)||NOISE.test(name)) continue;
+    const nums=[];
+    for(let c=0;c<width;c++){ if(c===nameCol) continue; const v=numCell(r[c]); if(v!=null&&v>0) nums.push(v); }
+    nums.sort((a,b)=>a-b);
+    const value=nums.length?nums[nums.length-1]:null;
+    const sip=nums.find(n=>n>=500&&n<=200000&&n!==value)??null;
+    out.push({name,sip,value:value!==sip?value:null});
+  }
+  if(!out.length) throw new Error("no rows that look like scheme holdings");
+  return dedupeHoldings(out);
+}
+
+/* A PDF row and a spreadsheet row are the same shape now, so the PDF path is
+   just the table parser with the block parser as a backstop for CAS layouts. */
+function linesToHoldings(rows){
+  try{ return rowsToHoldings(rows); }
+  catch(e){ return casBlocks(rows.map(r=>Array.isArray(r)?r.join(" "):String(r))); }
+}
+
+/* ---------- verification step ----------
+   Statements are messy, so nothing is scored until the extraction is shown and
+   confirmed: what was read, what it matched to in AMFI, and how confident that
+   match is. Bad rows can be dropped or corrected first. */
+const STAGED={rows:[]};
+
+function reconcile(list){
+  const st=list.stated||{};
+  const sum=k=>list.reduce((a,h)=>a+(h[k]||0),0);
+  const check=(label,got,want)=>{
+    if(want==null||!want) return null;
+    const diff=Math.abs(got-want);
+    return {label, got, want, ok:diff<Math.max(1,want*0.0001), diff};
+  };
+  return [check("Current value",sum("value"),st.value),
+          check("Amount invested",sum("invest"),st.invest),
+          check("Monthly SIP",sum("sip"),st.sip),
+          check("Monthly SWP",sum("swp"),st.swp)].filter(Boolean);
+}
+
+async function stageHoldings(list,sourceLabel){
+  pfStatus("Loading the AMFI scheme list to match names…");
+  await loadUniverse(n=>pfStatus(`Loading AMFI scheme list — ${n.toLocaleString()}…`));
+  STAGED.rows=list.map(h=>{
+    const m=matchScheme(h.name);
+    return {...h, matched:m, keep:!!m,
+            confidence: !m?"none" : m.exact?"exact"
+              : (normName(m.name)===normName(h.name)?"exact":"fuzzy")};
+  });
+  STAGED.recon=reconcile(list);
+  renderStaged(sourceLabel);
+  const ok=STAGED.rows.filter(r=>r.keep).length;
+  pfStatus(`Read ${list.length} holding(s) from ${sourceLabel}; ${ok} matched. Check the list, then run the review.`,
+    ok?"ok":"err");
+}
+
+function renderStaged(sourceLabel){
+  const R=STAGED.rows;
+  if(!R.length){ $("#pfstage").innerHTML=""; return; }
+  const badge=c=>c==="exact"?'<span class="rag g">exact</span>'
+    :c==="fuzzy"?'<span class="rag a">check</span>':'<span class="rag r">no match</span>';
+  const rec=STAGED.recon||[];
+  const allOk=rec.length&&rec.every(r=>r.ok);
+  $("#pfstage").innerHTML=`
+  <div class="card">
+    ${rec.length?`<div class="note ${allOk?"ok":"warn"}" style="margin-bottom:14px">
+      <b>${allOk?"Reconciled against the statement's own totals"
+                :"Does not tie out to the statement's totals — check before relying on this"}</b>
+      ${rec.map(r=>`<div class="tiny num" style="margin-top:3px">${esc(r.label)}: read ₹${
+        r.got.toLocaleString(undefined,{maximumFractionDigits:2})} · statement says ₹${
+        r.want.toLocaleString(undefined,{maximumFractionDigits:2})}${r.ok?" ✓":` · out by ₹${
+        r.diff.toLocaleString(undefined,{maximumFractionDigits:2})}`}</div>`).join("")}
+    </div>`:""}
+    <div class="row spread" style="margin-bottom:10px">
+      <div><div class="eyebrow">Check what was read from ${esc(sourceLabel)}</div>
+        <div class="tiny muted">${R.filter(r=>r.keep).length} of ${R.length} will be reviewed</div></div>
+      <div class="row">
+        <button id="pfremap" class="ghost"><i class="fa-solid fa-table-columns"></i>Map columns myself</button>
+        <button id="pfstagerun" class="primary"><i class="fa-solid fa-check"></i>Looks right — review</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:340px">
+      <table><thead><tr><th style="width:26px"></th><th>As read from the file</th>
+        <th style="text-align:left">Matched AMFI scheme</th><th>SIP</th><th>Value</th></tr></thead>
+      <tbody>${R.map((r,i)=>`<tr${r.keep?"":' style="opacity:.45"'}>
+        <td><input type="checkbox" data-keep="${i}" ${r.keep?"checked":""} ${r.matched?"":"disabled"} style="width:auto"></td>
+        <td>${esc(r.name)}</td>
+        <td style="text-align:left">${r.matched?esc(r.matched.name):'<span class="muted">not found in AMFI</span>'} ${badge(r.confidence)}</td>
+        <td class="num">${r.sip?"₹"+r.sip.toLocaleString():"—"}</td>
+        <td class="num">${r.value?"₹"+r.value.toLocaleString():"—"}</td></tr>`).join("")}</tbody></table>
+    </div>
+    <p class="tiny muted" style="margin-top:8px">Untick anything wrong. <b>check</b> means the name in your file was not identical to AMFI's.</p>
+  </div>`;
+  if($("#pfremap")) $("#pfremap").onclick=()=>{
+    if(LAST_ROWS) mapColumns(LAST_ROWS,LAST_LABEL,ALL_SHEETS);
+    else pfStatus("Upload a file first.","err"); };
+  $$("#pfstage input[data-keep]").forEach(cb=>cb.onchange=()=>{
+    STAGED.rows[+cb.dataset.keep].keep=cb.checked; renderStaged(sourceLabel);});
+  $("#pfstagerun").onclick=()=>{
+    const keep=STAGED.rows.filter(r=>r.keep);
+    if(!keep.length){ pfStatus("Nothing ticked.","err"); return; }
+    PF.meta=Object.fromEntries(keep.map(r=>[normName(r.matched.name),{schemeType:r.schemeType||"",asRead:r.name}]));
+    // Hand over the typed objects. The textarea is filled for transparency —
+    // so the user can see what was read — but it is NOT what gets reviewed.
+    // Round-tripping through text silently moved values into the SIP column
+    // whenever a holding had no SIP.
+    $("#pftext").value=keep.map(r=>
+      [r.matched.name, r.sip??"", r.value??""].join(", ")).join("\n");
+    // What the review does NOT cover is part of the review. A client document
+    // that totals 20 holdings when the statement has 21 is wrong by omission,
+    // however correct each of the 20 is.
+    const dropped=STAGED.rows.filter(r=>!r.keep);
+    PF.coverage={
+      total:STAGED.rows.length, kept:keep.length,
+      droppedValue:dropped.reduce((a,r)=>a+(r.value||0),0),
+      droppedNames:dropped.map(r=>r.name),
+      stated:(STAGED.recon||[]).reduce((a,c)=>(a[c.label]=c,a),{}),
+    };
+    $("#pfstage").innerHTML="";
+    runPortfolioReview(keep.map(r=>({
+      name:r.name,                      // exactly as the statement spelled it
+      matched:r.matched,                // already confirmed — do not re-guess
+      sip:r.sip??null, swp:r.swp??null, value:r.value??null,
+      invest:r.invest??null, folio:r.folio||"", schemeType:r.schemeType||"",
+    })));
+  };
+}
+
+async function handlePortfolioFile(file){
+  showView("pf");
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  let rows=null;
+  try{
+    if(ext==="xlsx"||ext==="xlsm"){ pfStatus("Reading the workbook…"); rows=await readXLSX(file); }
+    else if(ext==="pdf"){
+      pfStatus("Reading the PDF…");
+      try{ rows=await readPDF(file,$("#pfpwd").value); }
+      catch(e){
+        if(e.needPassword){ $("#pfpwdwrap").classList.remove("hidden"); pfStatus(e.message,"err"); return; }
+        throw e;
+      }
+    } else {
+      pfStatus("Reading the file…");
+      rows=(await file.text()).split(/\r?\n/).filter(l=>l.trim())
+        .map(l=>l.split(/[,;\t]/).map(c=>c.trim().replace(/^"|"$/g,"")));
+    }
+  }catch(e){ pfStatus(e.message,"err"); return; }
+
+  LAST_ROWS=rows; LAST_LABEL=file.name;
+  try{
+    const list=rowsToHoldings(rows);
+    await stageHoldings(list,file.name);
+  }catch(e){
+    // Auto-detection failed. That is expected on an unfamiliar broker export,
+    // so drop into the manual mapper rather than dead-ending on an error.
+    pfStatus(`Could not read this layout automatically (${e.message}). Map the columns below — it takes a few seconds.`,"err");
+    mapColumns(rows,file.name,ALL_SHEETS);
+  }
+}
+let LAST_ROWS=null, LAST_LABEL="";
+
+/* ===================== MANUAL COLUMN MAPPER =====================
+   No amount of header guessing covers every broker and app. When detection
+   fails — or gets it wrong — this shows the raw grid and lets the columns be
+   assigned by hand. That turns "unsupported format" into "thirty seconds of
+   pointing", which is the difference between a tool that works on one
+   statement and one that works on all of them. */
+const RAW={rows:[], sheets:[], sheet:0, label:""};
+
+function mapColumns(rows,label,sheets){
+  RAW.rows=rows; RAW.label=label||"the file";
+  RAW.sheets=sheets&&sheets.length?sheets:[rows]; RAW.sheet=0;
+  renderMapper(guessMap(rows));
+}
+function guessMap(rows){
+  const t=findTables(rows).find(x=>x.kind==="holdings")||findTables(rows)[0];
+  return t?{header:t.row,...t.map}:{header:-1};   // -1 = treat row 1 as data
+}
+const colLetter=i=>{let s="";i++;while(i>0){s=String.fromCharCode(65+(i-1)%26)+s;i=Math.floor((i-1)/26);}return s;};
+
+function renderMapper(map){
+  const rows=RAW.rows;
+  const width=Math.min(14,Math.max(...rows.slice(0,40).map(r=>r.length)));
+  const show=rows.slice(0,Math.min(18,rows.length));
+  const labelRow = map.header>=0 ? (rows[map.header]||[]) : (rows[0]||[]);
+  const opts=sel=>`<option value="">— none —</option>`+
+    Array.from({length:width},(_,i)=>`<option value="${i}" ${sel===i?"selected":""}>${colLetter(i)} · ${
+      esc(String(labelRow[i]||"").slice(0,24))||"(blank)"}</option>`).join("");
+  $("#pfstage").innerHTML=`
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:4px"><i class="fa-solid fa-table-columns"></i> Which columns are which in ${esc(RAW.label)}?</div>
+    <p class="tiny muted" style="margin-bottom:12px">Every broker names these differently. Pick the header row first — the dropdowns then show its labels.</p>
+    <div class="row" style="gap:10px;margin-bottom:12px">
+      ${RAW.sheets.length>1?`<label class="field" style="width:auto"><span>Sheet</span>
+        <select id="mapsheet" style="width:auto">${RAW.sheets.map((s,i)=>`<option value="${i}" ${i===RAW.sheet?"selected":""}>Sheet ${i+1} (${s.length} rows)</option>`).join("")}</select></label>`:""}
+      <label class="field" style="width:auto"><span>Header row</span>
+        <select id="maphdr" style="width:auto">
+          <option value="-1" ${map.header===-1?"selected":""}>No header — data starts at row 1</option>
+          ${show.map((r,i)=>`<option value="${i}" ${i===map.header?"selected":""}>Row ${i+1}: ${esc(r.filter(Boolean).slice(0,3).join(" / ").slice(0,34))}</option>`).join("")}
+        </select></label>
+      ${[["name","Scheme name"],["value","Current value"],["invest","Invested"],["sip","SIP amount"],["folio","Folio"],["type","Scheme type"]]
+        .map(([k,lbl])=>`<label class="field" style="width:auto"><span>${lbl}</span>
+          <select data-map="${k}" style="width:auto">${opts(map[k])}</select></label>`).join("")}
+    </div>
+    <div class="tbl-wrap" style="max-height:230px"><table><tbody>
+      ${show.map((r,i)=>`<tr${i===map.header?' class="cmp"':""}>
+        <td class="muted" style="width:26px">${i+1}</td>
+        ${Array.from({length:width},(_,c)=>`<td${Object.entries(map).some(([k,v])=>k!=="header"&&v===c)?' style="background:var(--ok-bg)"':""}>${
+          esc(String(r[c]||"").slice(0,22))}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>
+    <div class="row" style="margin-top:12px">
+      <button id="mapgo" class="primary"><i class="fa-solid fa-check"></i>Use these columns</button>
+      <span id="maperr" class="tiny" style="color:var(--bad)"></span>
+    </div>
+  </div>`;
+  const read=()=>{
+    const m={header:+$("#maphdr").value};
+    $$("#pfstage select[data-map]").forEach(s=>{ if(s.value!=="") m[s.dataset.map]=+s.value; });
+    return m;
+  };
+  $("#maphdr").onchange=()=>renderMapper(read());
+  $$("#pfstage select[data-map]").forEach(s=>s.onchange=()=>renderMapper(read()));
+  if($("#mapsheet")) $("#mapsheet").onchange=e=>{
+    RAW.sheet=+e.target.value; RAW.rows=RAW.sheets[RAW.sheet];
+    renderMapper(guessMap(RAW.rows));
+  };
+  $("#mapgo").onclick=async()=>{
+    const m=read();
+    if(m.name===undefined){ $("#maperr").textContent="Pick the scheme-name column."; return; }
+    try{
+      const list=readTable(RAW.rows,{row:m.header,map:m,kind:"holdings"});
+      const clean=dedupeHoldings(list.map(h=>({name:h.name,sip:h.sip??null,value:h.value??null,
+        invest:h.invest??null,schemeType:h.type||""})));
+      if(!clean.length) throw new Error("no scheme rows found under that header");
+      clean.stated=list.totals||{};
+      await stageHoldings(clean,RAW.label);
+    }catch(e){ $("#maperr").textContent=e.message; }
+  };
+}
+
+/* ===================== CONNECTION DIAGNOSTIC =====================
+   Distinguishes the three reasons a browser fetch can fail, which are
+   indistinguishable from the TypeError alone:
+
+     A. sandbox / CSP / offline  — the request never leaves the page
+     B. missing CORS headers     — the server answers, the browser bins it
+     C. reachable and allowed    — everything is fine
+
+   The discriminator is a `mode:'no-cors'` probe. It returns an opaque
+   response the script cannot read, but it only RESOLVES if the request
+   actually reached the server. Resolving after a normal fetch failed
+   therefore means the server is reachable and the CORS header is the
+   problem (B). Failing both ways means the request was blocked before
+   it ever went out (A).                                              */
+async function runDiagnostic(){
+  showView("setup");
+  const box=$("#diagout"), line=(t,cls="")=>{
+    const d=document.createElement("div");
+    d.style.cssText="padding:2px 0;"+(cls?`color:var(--${cls})`:"color:var(--ink2)"); d.innerHTML=t; box.appendChild(d);};
+  box.innerHTML=""; $("#diagcard").classList.remove("hidden");
+  const OK="ok", BAD="bad", WARN="warn";
+
+  const proto=location.protocol, inFrame=(()=>{try{return window.self!==window.top;}catch(e){return true;}})();
+  const sandboxed = proto==="blob:" || proto==="data:" || origin==="null" || (inFrame&&proto==="file:");
+  line(`<b>Page origin</b>: <code>${esc(location.origin||"null")}</code> (${esc(proto)})`);
+  line(`<b>Inside an iframe / preview</b>: ${inFrame?"yes":"no"}`, inFrame?WARN:"");
+  line(`<b>Browser reports online</b>: ${navigator.onLine?"yes":"no"}`, navigator.onLine?"":BAD);
+  line("Probing api.mfapi.in …");
+
+  const url=`${API}/mf?limit=1&offset=0`;
+  let normal=null, opaque=null;
+  try{ const r=await fetch(url); await r.json(); normal="ok"; }
+  catch(e){ normal=e.message||String(e); }
+
+  if(normal==="ok"){
+    line("<b>Result: WORKING</b> — the API is reachable and CORS is allowed.",OK);
+    line("If a category still fails, it is a data problem, not a connection problem.");
+    return "ok";
+  }
+  line(`Standard request failed: <code>${esc(normal)}</code>`,BAD);
+  try{ await fetch(url,{mode:"no-cors"}); opaque="reached"; }
+  catch(e){ opaque=e.message||String(e); }
+
+  if(opaque==="reached"){
+    line("<b>Result: SERVER REACHABLE, CORS BLOCKED</b>",BAD);
+    line("The request got to api.mfapi.in, but it did not return an "+
+         "<code>Access-Control-Allow-Origin</code> header your browser accepts, so the response was discarded.");
+    line("This is a limitation of the API, not of your machine. Opening the file from a normal "+
+         "<code>https://</code> page instead of a local file sometimes helps; otherwise the data has to be "+
+         "fetched outside the browser.",WARN);
+    return "cors";
+  }
+  line(`No-CORS probe also failed: <code>${esc(opaque)}</code>`,BAD);
+  line("<b>Result: BLOCKED BEFORE LEAVING THE PAGE</b>",BAD);
+  if(sandboxed||inFrame)
+    line("You are viewing this inside a preview / sandboxed frame, which is the most likely cause. "+
+         "<b>Download the file and open it directly in Chrome, Edge or Safari</b> — not in an app's built-in preview.",WARN);
+  else if(!navigator.onLine) line("Your browser reports no network connection.",WARN);
+  else line("A firewall, VPN, ad-blocker or privacy extension is the usual cause. Try another network, "+
+            "or disable extensions for this page.",WARN);
+  return "blocked";
+}
+
+/* ---------- CSV exports ---------- */
+function exportCSV(){
+  const d=S.cats[S.active]; if(!d) return;
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const head=["Category","Plan","Fund","AMC","Row type","Rolling return source",
+              "Years since launch","Fully comparable","Metric window","Windows averaged"]
+    .concat(PARAMS.map(p=>p.label)).concat(PARAMS.map(p=>p.short+" RAG"))
+    .concat(["Composite score","Max score","Params scored","Rank","Verdict"]);
+  const L=[head.map(q).join(",")];
+  const vals=o=>PARAMS.map(p=>o[p.key]==null?"":o[p.key].toFixed(4));
+  if(d.bmM) L.push([d.cfg.name,d.plan,d.benchName||"benchmark","","Benchmark",d.bmM._rollSrc||"","","",d.metricMode,d.bmM._windows??""]
+      .map(q).concat(vals(d.bmM)).concat(PARAMS.map(()=>"")).concat(["","","","",""]).join(","));
+  L.push([d.cfg.name,d.plan,"Category average","","Category average","","","",d.metricMode,""]
+      .map(q).concat(vals(d.catAvg)).concat(PARAMS.map(()=>"")).concat(["","","","",""]).join(","));
+  for(const r of d.rows) L.push([d.cfg.name,d.plan,r.name,r.amc,"Fund",r.rollSrc||"",
+      r.ageYears.toFixed(1), r.qualified?"yes":"no", r.m._mode||"", r.m._windows??""]
+      .map(q).concat(vals(r.m)).concat(r.s.pts.map(p=>p==null?"":p))
+      .concat([r.s.total??"",r.s.max||"",r.s.n,r.rank??"",
+        r.s.pct==null?"":(r.s.pct>=.75?"Buy / Core":r.s.pct>=.5?"Hold":"Review")]).join(","));
+  saveBlob(brandCSVHeader(`${d.cfg.name} — ${d.plan} plan ratings`)+L.join("\n"),
+    `mf-ratings-${d.cfg.id}.csv`);
+}
+
+/* ---------- view router ----------
+   One thing on screen at a time. The category picker, the results, the
+   portfolio review and the setup never share a page. */
+function showView(v){
+  for(const k of ["rate","pf","setup"]) $("#view-"+k).classList.toggle("hidden",k!==v);
+  $$("nav.tabs button").forEach(b=>b.setAttribute("aria-current",String(b.dataset.view===v)));
+  document.body.classList.toggle("wide-mode", v==="rate"&&!$("#rate-run").classList.contains("hidden"));
+  $("#main").className = (v==="rate"&&!$("#rate-run").classList.contains("hidden"))||v==="pf" ? "wide" : "";
+  window.scrollTo(0,0);
+}
+function showRate(step){
+  $("#rate-pick").classList.toggle("hidden",step==="run");
+  $("#rate-run").classList.toggle("hidden",step!=="run");
+  showView("rate");
+}
+
+/* ---------- settings ---------- */
+function setMode(m){
+  Q.mode=m;
+  $$("#modewrap button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.mode===m)));
+  $("#modehint").textContent = m==="nav"
+    ? "Computed from AMFI NAV on Advisorkhoj's convention — no input needed."
+    : "Tries Advisorkhoj / Value Research / Morningstar, then prompts you.";
+}
+function setPlan(p){
+  PLAN=p;
+  $$("#planwrap button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.plan===p)));
+  $("#planhint").textContent = p==="regular"
+    ? "What you sell as a distributor. Benchmarks matched to the same plan."
+    : "Lower expense ratio, so returns run higher than a client in Regular actually gets.";
+  if(Object.keys(S.cats).length){ S.cats={};
+    setStatus("Plan changed — re-run the category.","warn"); }
+  render();
+}
+
+function boot(){
+  wireModal(); setMode("nav"); setPlan("regular");
+  $$("nav.tabs button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+  $$("#modewrap button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  $$("#planwrap button").forEach(b=>b.onclick=()=>setPlan(b.dataset.plan));
+
+  const paintSpan=()=>$$("#spanwrap button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.span===ROLL_SPAN)));
+  $$("#spanwrap button").forEach(b=>b.onclick=()=>{
+    ROLL_SPAN=+b.dataset.span; paintSpan();
+    if(Object.keys(S.cats).length){ S.cats={}; render(); setStatus("Rolling span changed — re-run the category.","warn"); }});
+  paintSpan();
+
+  const paintCap=()=>{
+    $$("#capwrap button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.cap===MAX_FUNDS)));
+    $("#caphint").textContent = MAX_FUNDS>=400
+      ? "Every matching scheme. Slowest, but the category average uses the whole category."
+      : `Caps each category at ${MAX_FUNDS} schemes; the table says when it bites.`;
+  };
+  $$("#capwrap button").forEach(b=>b.onclick=()=>{
+    MAX_FUNDS=+b.dataset.cap; paintCap();
+    if(Object.keys(S.cats).length){ S.cats={}; render(); setStatus("Fund limit changed — re-run the category.","warn"); }});
+  paintCap();
+
+  const paintMM=()=>{
+    $$("#modewrap2 button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.mm===METRIC_MODE)));
+    $("#mmhint").textContent = METRIC_MODE==="rolling"
+      ? `Alpha, Sortino, capture ratios and std dev are averaged over every rolling 3-year window in the span — a fund must have been good in most 3-year periods, not one lucky stretch.`
+      : "One trailing 3-year reading per metric. Faster, but a single good stretch can carry a fund.";
+  };
+  $$("#modewrap2 button").forEach(b=>b.onclick=()=>{
+    METRIC_MODE=b.dataset.mm; paintMM();
+    if(Object.keys(S.cats).length){ S.cats={}; render();
+      setStatus("Metric window changed — re-run the category.","warn"); }});
+  paintMM();
+
+  const paintTenure=()=>{
+    $$("#tenurewrap button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.tenure===MIN_TENURE)));
+    $("#tenurehint").textContent =
+      `Funds with less than ${MIN_TENURE} years since launch, or missing any parameter, drop below the line and are not ranked.`;
+  };
+  $$("#tenurewrap button").forEach(b=>b.onclick=()=>{
+    MIN_TENURE=+b.dataset.tenure; paintTenure();
+    if(Object.keys(S.cats).length){ S.cats={}; render();
+      setStatus("Tenure filter changed — re-run the category.","warn"); }});
+  paintTenure();
+
+  $("#runbtn").onclick=()=>runCategory(CATEGORIES.find(c=>c.id===S.active));
+  $("#rate-back").onclick=()=>showRate("pick");
+  $("#exportbtn").onclick=exportCSV;
+  $("#diagbtn").onclick=()=>runDiagnostic();
+
+  $("#theme").onclick=()=>{
+    const dark=document.documentElement.dataset.theme==="dark";
+    document.documentElement.dataset.theme=dark?"light":"dark";
+    $("#theme").innerHTML=`<i class="fa-solid fa-${dark?"moon":"sun"}"></i>`;
+  };
+  if(matchMedia("(prefers-color-scheme: dark)").matches) $("#theme").click();
+
+  /* benchmarks */
+  $("#trifile").onchange=async e=>{
+    const files=[...e.target.files]; if(!files.length) return;
+    setStatus(`Reading ${files.length} TRI file(s)…`);
+    showView("setup");
+    const rep=await importTRIFiles(files);
+    const ok=rep.filter(x=>x.ok).length;
+    renderTRI(rep); renderBanner(); render();
+    setStatus(ok?`${ok} of ${files.length} imported.`:"None could be used.",ok?"ok":"bad");
+    e.target.value="";
+  };
+  $("#tribundlesave").onclick=()=>{
+    const n=exportTRIBundle();
+    setStatus(n?`Bundle saved with ${n} index(es).`:"Import at least one TRI file first.",n?"ok":"warn");
+  };
+  $("#tribundle").onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    showView("setup");
+    try{ const n=await importTRIBundle(f); renderTRI(null); renderBanner(); render();
+      setStatus(`Bundle loaded: ${n} index(es) ready.`,"ok"); }
+    catch(err){ setStatus("Could not read bundle — "+err.message,"bad"); }
+    e.target.value="";
+  };
+  $("#csvfile").onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ const n=parseCSV(rd.result);
+      $("#csvlabel").textContent=n?`${n} rolling returns loaded`:"No rows parsed";
+      setStatus(n?`${n} rolling returns matched by name. Re-run a category to apply.`:"No usable rows found.",n?"ok":"bad"); };
+    rd.readAsText(f); e.target.value="";
+  };
+
+  /* portfolio */
+  $("#pf-paste-toggle").onclick=()=>$("#pf-paste").classList.toggle("hidden");
+  $("#pfrun").onclick=()=>runPortfolioReview($("#pftext").value);
+  $("#pfcsv").onclick=exportPortfolioCSV;
+  $("#pfprint").onclick=printReview;
+  $("#pfclient").oninput=e=>{ PF.client=e.target.value; renderPortfolio(); };
+  $("#pfsample").onclick=()=>{ $("#pftext").value=
+    "HDFC Flexi Cap Fund - Growth, 5000, 250000\nNippon India Large Cap Fund - Growth, 3000, 180000\nSBI Small Cap Fund - Growth, 2500"; };
+  let pfFile=null;
+  $("#pffile").onchange=e=>{ const f=e.target.files[0]; if(!f) return;
+    pfFile=f; $("#pfpwdwrap").classList.add("hidden"); $("#pfstage").innerHTML="";
+    handlePortfolioFile(f); e.target.value=""; };
+  $("#pfpwdgo").onclick=()=>{ if(pfFile) handlePortfolioFile(pfFile); };
+  $("#pfpwd").onkeydown=ev=>{ if(ev.key==="Enter"&&pfFile) handlePortfolioFile(pfFile); };
+
+  /* dialogs */
+  $("#roll-close").onclick=()=>$("#rollmodal").classList.add("hidden");
+  $("#roll-dl").onclick=downloadRolling;
+  document.addEventListener("click",e=>{
+    const c=e.target.closest("[data-roll]"); if(c) showRolling(c.dataset.roll);
+    if(e.target.id==="rollmodal") $("#rollmodal").classList.add("hidden");
+  });
+
+  $("#up-close").onclick=()=>$("#upmodal").classList.add("hidden");
+  $("#up-bundle").onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{ const n=await importTRIBundle(f); renderTRI(null); renderBanner(); render();
+      $("#upmodal").classList.add("hidden");
+      setStatus(`Bundle loaded: ${n} index(es) ready.`,"ok"); }
+    catch(err){ setStatus("Could not read bundle — "+err.message,"bad"); }
+    e.target.value="";
+  };
+  $("#up-csv").onchange=async e=>{
+    const files=[...e.target.files]; if(!files.length) return;
+    const rep=await importTRIFiles(files);
+    renderTRI(rep); renderBanner(); render();
+    if(rep.some(x=>x.ok)) $("#upmodal").classList.add("hidden");
+    e.target.value="";
+  };
+  wireBrand();
+  window.addEventListener("beforeprint", paintPrintHead);
+  renderTRI(null); renderBanner(); render(); showRate("pick");
+}
+document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot):boot();
+
+</script>
+</body>
+</html>
